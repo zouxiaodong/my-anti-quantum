@@ -2,4 +2,8 @@
 <resources>
     <color name="background">#F5F5F5</color>
     <color name="log_background">#E0E0E0</color>
+    <color name="red">#F44336</color>
+    <color name="green">#4CAF50</color>
+    <color name="purple_500">#673AB7</color>
+    <color name="purple_700">#512DA8</color>
 </resources>

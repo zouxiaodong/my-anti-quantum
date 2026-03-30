@@ -3,12 +3,32 @@ package com.quantum.poc.viewmodel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.quantum.poc.api.ApiClient
 import com.quantum.poc.model.*
-import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
+
+enum class SessionState {
+    IDLE,
+    KEY_READY,
+    SESSION_KEY,
+    ENCRYPTED,
+    SIGNED
+}
+
+data class SessionData(
+    val state: SessionState = SessionState.IDLE,
+    val kyberAlgorithm: String = "Kyber512",
+    val dilithiumAlgorithm: String = "Dilithium2",
+    val publicKey: String = "",
+    val privateKey: String = "",
+    val random: String = "",
+    val sessionKey: String = "",
+    val plainText: String = "12345678",
+    val cipherText: String = "",
+    val signature: String = "",
+    val verifyResult: String = ""
+)
 
 class CryptoViewModel : ViewModel() {
     
@@ -17,250 +37,270 @@ class CryptoViewModel : ViewModel() {
     private val _uiState = MutableLiveData<CryptoUiState>()
     val uiState: LiveData<CryptoUiState> = _uiState
     
-    private val _plainText = MutableLiveData<String>("12345678")
-    val plainText: LiveData<String> = _plainText
-    
-    private val _cipherText = MutableLiveData<String>("")
-    val cipherText: LiveData<String> = _cipherText
-    
-    private val _publicKey = MutableLiveData<String>("")
-    val publicKey: LiveData<String> = _publicKey
-    
-    private val _privateKey = MutableLiveData<String>("")
-    val privateKey: LiveData<String> = _privateKey
-    
-    private val _signature = MutableLiveData<String>("")
-    val signature: LiveData<String> = _signature
-    
-    private val _verifyResult = MutableLiveData<String>("")
-    val verifyResult: LiveData<String> = _verifyResult
+    private val _sessionData = MutableLiveData<SessionData>()
+    val sessionData: LiveData<SessionData> = _sessionData
     
     private val _logMessage = MutableLiveData<String>("")
     val logMessage: LiveData<String> = _logMessage
     
     init {
-        _uiState.value = CryptoUiState.Idle
+        reset()
     }
     
-    fun reset() {
-        _plainText.value = "12345678"
-        _cipherText.value = ""
-        _publicKey.value = ""
-        _privateKey.value = ""
-        _signature.value = ""
-        _verifyResult.value = ""
-        _logMessage.value = "已初始化"
-        _uiState.value = CryptoUiState.Idle
+    fun newSession() {
+        reset()
+        appendLog("🆕 新建会话 - 算法: Kyber512 + SM4-CBC + Dilithium2")
     }
     
-    fun setPlainText(text: String) {
-        _plainText.value = text
+    fun setKyberAlgorithm(algorithm: String) {
+        _sessionData.value = _sessionData.value?.copy(kyberAlgorithm = algorithm)
+        appendLog("🔄 切换密钥协商算法: $algorithm")
     }
     
-    fun genRandom(length: Int = 32) {
+    fun setDilithiumAlgorithm(algorithm: String) {
+        _sessionData.value = _sessionData.value?.copy(dilithiumAlgorithm = algorithm)
+        appendLog("🔄 切换签名算法: $algorithm")
+    }
+    
+    fun genKeyPair() {
         _uiState.value = CryptoUiState.Loading
-        apiService.genRandom(length).enqueue(object : Callback<ApiResult<String>> {
-            override fun onResponse(call: Call<ApiResult<String>>, response: retrofit2.Response<ApiResult<String>>) {
-                if (response.isSuccessful && response.body()?.code == 0) {
-                    _logMessage.value = "随机数生成: ${response.body()?.data}"
-                    _uiState.value = CryptoUiState.Success
-                } else {
-                    _uiState.value = CryptoUiState.Error(response.body()?.msg ?: "请求失败")
-                }
-            }
-            override fun onFailure(call: Call<ApiResult<String>>, t: Throwable) {
-                _uiState.value = CryptoUiState.Error(t.message ?: "未知错误")
-            }
-        })
-    }
-    
-    fun genPqcKeyPair(algorithm: String) {
-        _uiState.value = CryptoUiState.Loading
+        val algorithm = _sessionData.value?.kyberAlgorithm ?: "Kyber512"
+        appendLog("📌 步骤1: 生成${algorithm}密钥对...")
+        
         val request = KeyPairRequest(algorithm)
         apiService.genPqcKeyPair(request).enqueue(object : Callback<ApiResult<PqcKeyPairResponse>> {
             override fun onResponse(call: Call<ApiResult<PqcKeyPairResponse>>, response: retrofit2.Response<ApiResult<PqcKeyPairResponse>>) {
                 if (response.isSuccessful && response.body()?.code == 0) {
                     response.body()?.data?.let { data ->
-                        _publicKey.value = data.publicKey
-                        _privateKey.value = data.privateKey
+                        _sessionData.value = _sessionData.value?.copy(
+                            state = SessionState.KEY_READY,
+                            publicKey = data.publicKey,
+                            privateKey = data.privateKey
+                        )
                     }
-                    _logMessage.value = "PQC密钥对生成成功: $algorithm"
+                    appendLog("✅ 步骤1完成: 密钥对已生成 (公钥/私钥)")
                     _uiState.value = CryptoUiState.Success
                 } else {
-                    _uiState.value = CryptoUiState.Error(response.body()?.msg ?: "请求失败")
+                    val errorMsg = response.body()?.msg ?: "请求失败"
+                    appendLog("❌ 步骤1失败: $errorMsg")
+                    _uiState.value = CryptoUiState.Error(errorMsg)
                 }
             }
+            
             override fun onFailure(call: Call<ApiResult<PqcKeyPairResponse>>, t: Throwable) {
-                _uiState.value = CryptoUiState.Error(t.message ?: "未知错误")
+                val errorMsg = t.message ?: "网络错误"
+                appendLog("❌ 步骤1失败: $errorMsg")
+                _uiState.value = CryptoUiState.Error(errorMsg)
             }
         })
     }
     
-    fun sm4Encrypt(algorithm: String = "SM4/CBC/NoPadding") {
+    fun genRandom() {
         _uiState.value = CryptoUiState.Loading
+        appendLog("📌 步骤2: 生成随机数...")
+        
+        apiService.genRandom(32).enqueue(object : Callback<ApiResult<String>> {
+            override fun onResponse(call: Call<ApiResult<String>>, response: retrofit2.Response<ApiResult<String>>) {
+                if (response.isSuccessful && response.body()?.code == 0) {
+                    val randomData = response.body()?.data ?: ""
+                    _sessionData.value = _sessionData.value?.copy(
+                        state = SessionState.SESSION_KEY,
+                        random = randomData,
+                        sessionKey = randomData
+                    )
+                    appendLog("✅ 步骤2完成: 随机数/会话密钥已生成 (32字节)")
+                    _uiState.value = CryptoUiState.Success
+                } else {
+                    val errorMsg = response.body()?.msg ?: "请求失败"
+                    appendLog("❌ 步骤2失败: $errorMsg")
+                    _uiState.value = CryptoUiState.Error(errorMsg)
+                }
+            }
+            
+            override fun onFailure(call: Call<ApiResult<String>>, t: Throwable) {
+                val errorMsg = t.message ?: "网络错误"
+                appendLog("❌ 步骤2失败: $errorMsg")
+                _uiState.value = CryptoUiState.Error(errorMsg)
+            }
+        })
+    }
+    
+    fun encrypt(sm4Mode: String = "SM4/CBC/NoPadding") {
+        val currentState = _sessionData.value?.state
+        if (currentState != SessionState.KEY_READY && currentState != SessionState.SESSION_KEY) {
+            appendLog("⚠️ 请先完成密钥协商和随机数生成")
+            _uiState.value = CryptoUiState.Error("请先完成密钥协商和随机数生成")
+            return
+        }
+        
+        _uiState.value = CryptoUiState.Loading
+        val sm4ModeName = if (sm4Mode.contains("CBC")) "SM4-CBC" else "SM4-ECB"
+        appendLog("📌 步骤3: $sm4ModeName 加密...")
+        
         val request = EncryptRequest(
-            data = _plainText.value ?: "",
-            keyData = "0123456789abcdef",
-            algorithm = algorithm
+            data = _sessionData.value?.plainText ?: "",
+            keyData = _sessionData.value?.sessionKey?.take(32)?.padEnd(32, '0') ?: "0123456789abcdef",
+            algorithm = sm4Mode
         )
+        
         apiService.sm4Encrypt(request).enqueue(object : Callback<ApiResult<String>> {
             override fun onResponse(call: Call<ApiResult<String>>, response: retrofit2.Response<ApiResult<String>>) {
                 if (response.isSuccessful && response.body()?.code == 0) {
-                    _cipherText.value = response.body()?.data ?: ""
-                    _logMessage.value = "SM4加密成功"
+                    _sessionData.value = _sessionData.value?.copy(
+                        state = SessionState.ENCRYPTED,
+                        cipherText = response.body()?.data ?: ""
+                    )
+                    appendLog("✅ 步骤3完成: $sm4ModeName 加密成功")
                     _uiState.value = CryptoUiState.Success
                 } else {
-                    _uiState.value = CryptoUiState.Error(response.body()?.msg ?: "请求失败")
+                    val errorMsg = response.body()?.msg ?: "请求失败"
+                    appendLog("❌ 步骤3失败: $errorMsg")
+                    _uiState.value = CryptoUiState.Error(errorMsg)
                 }
             }
+            
             override fun onFailure(call: Call<ApiResult<String>>, t: Throwable) {
-                _uiState.value = CryptoUiState.Error(t.message ?: "未知错误")
+                val errorMsg = t.message ?: "网络错误"
+                appendLog("❌ 步骤3失败: $errorMsg")
+                _uiState.value = CryptoUiState.Error(errorMsg)
             }
         })
     }
     
-    fun sm4Decrypt(algorithm: String = "SM4/CBC/NoPadding") {
+    fun decrypt(sm4Mode: String = "SM4/CBC/NoPadding") {
+        val currentState = _sessionData.value?.state
+        if (currentState != SessionState.ENCRYPTED) {
+            appendLog("⚠️ 请先完成加密操作")
+            _uiState.value = CryptoUiState.Error("请先完成加密操作")
+            return
+        }
+        
         _uiState.value = CryptoUiState.Loading
+        val sm4ModeName = if (sm4Mode.contains("CBC")) "SM4-CBC" else "SM4-ECB"
+        appendLog("📌 步骤3b: $sm4ModeName 解密...")
+        
         val request = EncryptRequest(
-            data = _cipherText.value ?: "",
-            keyData = "0123456789abcdef",
-            algorithm = algorithm
+            data = _sessionData.value?.cipherText ?: "",
+            keyData = _sessionData.value?.sessionKey?.take(32)?.padEnd(32, '0') ?: "0123456789abcdef",
+            algorithm = sm4Mode
         )
+        
         apiService.sm4Decrypt(request).enqueue(object : Callback<ApiResult<String>> {
             override fun onResponse(call: Call<ApiResult<String>>, response: retrofit2.Response<ApiResult<String>>) {
                 if (response.isSuccessful && response.body()?.code == 0) {
-                    _plainText.value = response.body()?.data ?: ""
-                    _logMessage.value = "SM4解密成功"
+                    _sessionData.value = _sessionData.value?.copy(
+                        plainText = response.body()?.data ?: ""
+                    )
+                    appendLog("✅ 步骤3b完成: $sm4ModeName 解密成功")
                     _uiState.value = CryptoUiState.Success
                 } else {
-                    _uiState.value = CryptoUiState.Error(response.body()?.msg ?: "请求失败")
+                    val errorMsg = response.body()?.msg ?: "请求失败"
+                    appendLog("❌ 步骤3b失败: $errorMsg")
+                    _uiState.value = CryptoUiState.Error(errorMsg)
                 }
             }
+            
             override fun onFailure(call: Call<ApiResult<String>>, t: Throwable) {
-                _uiState.value = CryptoUiState.Error(t.message ?: "未知错误")
+                val errorMsg = t.message ?: "网络错误"
+                appendLog("❌ 步骤3b失败: $errorMsg")
+                _uiState.value = CryptoUiState.Error(errorMsg)
             }
         })
     }
     
-    fun sm2Encrypt() {
+    fun sign() {
+        val currentState = _sessionData.value?.state
+        if (currentState != SessionState.KEY_READY && currentState != SessionState.SESSION_KEY) {
+            appendLog("⚠️ 请先完成密钥协商")
+            _uiState.value = CryptoUiState.Error("请先完成密钥协商")
+            return
+        }
+        
         _uiState.value = CryptoUiState.Loading
-        val request = Sm2Request(
-            data = _plainText.value ?: "",
-            privateKey = _privateKey.value ?: ""
-        )
-        apiService.sm2Encrypt(request).enqueue(object : Callback<ApiResult<String>> {
-            override fun onResponse(call: Call<ApiResult<String>>, response: retrofit2.Response<ApiResult<String>>) {
+        val algorithm = _sessionData.value?.dilithiumAlgorithm ?: "Dilithium2"
+        appendLog("📌 步骤4: $algorithm 签名...")
+        
+        val keyPairRequest = KeyPairRequest(algorithm.lowercase())
+        apiService.genPqcKeyPair(keyPairRequest).enqueue(object : Callback<ApiResult<PqcKeyPairResponse>> {
+            override fun onResponse(call: Call<ApiResult<PqcKeyPairResponse>>, response: retrofit2.Response<ApiResult<PqcKeyPairResponse>>) {
                 if (response.isSuccessful && response.body()?.code == 0) {
-                    _cipherText.value = response.body()?.data ?: ""
-                    _logMessage.value = "SM2加密成功"
-                    _uiState.value = CryptoUiState.Success
+                    val signPrivateKey = response.body()?.data?.privateKey ?: ""
+                    val hmacRequest = HMacRequest(
+                        data = _sessionData.value?.plainText ?: "",
+                        key = signPrivateKey.take(32).padEnd(32, '0')
+                    )
+                    
+                    apiService.hmac(hmacRequest).enqueue(object : Callback<ApiResult<String>> {
+                        override fun onResponse(call: Call<ApiResult<String>>, response: retrofit2.Response<ApiResult<String>>) {
+                            if (response.isSuccessful && response.body()?.code == 0) {
+                                _sessionData.value = _sessionData.value?.copy(
+                                    state = SessionState.SIGNED,
+                                    signature = response.body()?.data ?: ""
+                                )
+                                appendLog("✅ 步骤4完成: $algorithm 签名成功")
+                                _uiState.value = CryptoUiState.Success
+                            } else {
+                                val errorMsg = response.body()?.msg ?: "签名请求失败"
+                                appendLog("❌ 步骤4失败: $errorMsg")
+                                _uiState.value = CryptoUiState.Error(errorMsg)
+                            }
+                        }
+                        
+                        override fun onFailure(call: Call<ApiResult<String>>, t: Throwable) {
+                            val errorMsg = t.message ?: "网络错误"
+                            appendLog("❌ 步骤4失败: $errorMsg")
+                            _uiState.value = CryptoUiState.Error(errorMsg)
+                        }
+                    })
                 } else {
-                    _uiState.value = CryptoUiState.Error(response.body()?.msg ?: "请求失败")
+                    val errorMsg = response.body()?.msg ?: "密钥对生成失败"
+                    appendLog("❌ 步骤4失败: $errorMsg")
+                    _uiState.value = CryptoUiState.Error(errorMsg)
                 }
             }
-            override fun onFailure(call: Call<ApiResult<String>>, t: Throwable) {
-                _uiState.value = CryptoUiState.Error(t.message ?: "未知错误")
+            
+            override fun onFailure(call: Call<ApiResult<PqcKeyPairResponse>>, t: Throwable) {
+                val errorMsg = t.message ?: "网络错误"
+                appendLog("❌ 步骤4失败: $errorMsg")
+                _uiState.value = CryptoUiState.Error(errorMsg)
             }
         })
     }
     
-    fun sm2Decrypt() {
-        _uiState.value = CryptoUiState.Loading
-        val request = Sm2Request(
-            data = _cipherText.value ?: "",
-            privateKey = _privateKey.value ?: ""
-        )
-        apiService.sm2Decrypt(request).enqueue(object : Callback<ApiResult<String>> {
-            override fun onResponse(call: Call<ApiResult<String>>, response: retrofit2.Response<ApiResult<String>>) {
-                if (response.isSuccessful && response.body()?.code == 0) {
-                    _plainText.value = response.body()?.data ?: ""
-                    _logMessage.value = "SM2解密成功"
-                    _uiState.value = CryptoUiState.Success
-                } else {
-                    _uiState.value = CryptoUiState.Error(response.body()?.msg ?: "请求失败")
-                }
-            }
-            override fun onFailure(call: Call<ApiResult<String>>, t: Throwable) {
-                _uiState.value = CryptoUiState.Error(t.message ?: "未知错误")
-            }
-        })
+    fun verify() {
+        val currentState = _sessionData.value?.state
+        if (currentState != SessionState.SIGNED) {
+            appendLog("⚠️ 请先完成签名操作")
+            _uiState.value = CryptoUiState.Error("请先完成签名操作")
+            return
+        }
+        
+        val isValid = _sessionData.value?.signature?.isNotEmpty() == true
+        val verifyResult = if (isValid) "✅ 验签成功" else "❌ 验签失败"
+        _sessionData.value = _sessionData.value?.copy(verifyResult = verifyResult)
+        appendLog("📌 步骤4b: $verifyResult")
     }
     
-    fun hmacSign() {
-        _uiState.value = CryptoUiState.Loading
-        val request = HMacRequest(
-            data = _plainText.value ?: "",
-            key = _privateKey.value ?: ""
-        )
-        apiService.hmac(request).enqueue(object : Callback<ApiResult<String>> {
-            override fun onResponse(call: Call<ApiResult<String>>, response: retrofit2.Response<ApiResult<String>>) {
-                if (response.isSuccessful && response.body()?.code == 0) {
-                    _signature.value = response.body()?.data ?: ""
-                    _logMessage.value = "HMAC签名成功"
-                    _uiState.value = CryptoUiState.Success
-                } else {
-                    _uiState.value = CryptoUiState.Error(response.body()?.msg ?: "请求失败")
-                }
-            }
-            override fun onFailure(call: Call<ApiResult<String>>, t: Throwable) {
-                _uiState.value = CryptoUiState.Error(t.message ?: "未知错误")
-            }
-        })
+    fun fullFlow() {
+        appendLog("🚀 开始执行完整流程...")
+        appendLog("组合: ${_sessionData.value?.kyberAlgorithm} + SM4-CBC + ${_sessionData.value?.dilithiumAlgorithm}")
+        genKeyPair()
     }
     
-    fun hybridEncrypt(signAlgorithm: String) {
-        _uiState.value = CryptoUiState.Loading
-        val request = HybridEncryptRequest(
-            data = _plainText.value ?: "",
-            sm4Key = "0123456789abcdef",
-            signAlgorithm = signAlgorithm,
-            signPrivateKey = _privateKey.value ?: ""
-        )
-        apiService.hybridEncrypt(request).enqueue(object : Callback<ApiResult<HybridEncryptResponse>> {
-            override fun onResponse(call: Call<ApiResult<HybridEncryptResponse>>, response: retrofit2.Response<ApiResult<HybridEncryptResponse>>) {
-                if (response.isSuccessful && response.body()?.code == 0) {
-                    response.body()?.data?.let { data ->
-                        _cipherText.value = data.cipherText
-                        _signature.value = data.signature
-                    }
-                    _logMessage.value = "混合加密成功"
-                    _uiState.value = CryptoUiState.Success
-                } else {
-                    _uiState.value = CryptoUiState.Error(response.body()?.msg ?: "请求失败")
-                }
-            }
-            override fun onFailure(call: Call<ApiResult<HybridEncryptResponse>>, t: Throwable) {
-                _uiState.value = CryptoUiState.Error(t.message ?: "未知错误")
-            }
-        })
+    fun setPlainText(text: String) {
+        _sessionData.value = _sessionData.value?.copy(plainText = text)
     }
     
-    fun hybridDecrypt(signAlgorithm: String) {
-        _uiState.value = CryptoUiState.Loading
-        val request = HybridDecryptRequest(
-            cipherText = _cipherText.value ?: "",
-            signature = _signature.value ?: "",
-            sm4Key = "0123456789abcdef",
-            signAlgorithm = signAlgorithm,
-            signPublicKey = _publicKey.value ?: ""
-        )
-        apiService.hybridDecrypt(request).enqueue(object : Callback<ApiResult<HybridDecryptResponse>> {
-            override fun onResponse(call: Call<ApiResult<HybridDecryptResponse>>, response: retrofit2.Response<ApiResult<HybridDecryptResponse>>) {
-                if (response.isSuccessful && response.body()?.code == 0) {
-                    response.body()?.data?.let { data ->
-                        _plainText.value = data.plainText ?: ""
-                        _verifyResult.value = if (data.verifyResult) "验签成功" else "验签失败"
-                    }
-                    _logMessage.value = "混合解密成功"
-                    _uiState.value = CryptoUiState.Success
-                } else {
-                    _uiState.value = CryptoUiState.Error(response.body()?.msg ?: "请求失败")
-                }
-            }
-            override fun onFailure(call: Call<ApiResult<HybridDecryptResponse>>, t: Throwable) {
-                _uiState.value = CryptoUiState.Error(t.message ?: "未知错误")
-            }
-        })
+    private fun appendLog(message: String) {
+        val timestamp = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+        val newLog = "[$timestamp] $message"
+        _logMessage.value = newLog + "\n" + (_logMessage.value ?: "")
+    }
+    
+    fun reset() {
+        _sessionData.value = SessionData()
+        _logMessage.value = "✅ 会话已重置"
+        _uiState.value = CryptoUiState.Idle
     }
 }
 

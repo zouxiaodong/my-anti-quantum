@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Kyber算法列表 -->
+    <string-array name="kyber_algorithms">
+        <item>Kyber512</item>
+        <item>Kyber768</item>
+        <item>Kyber1024</item>
+    </string-array>
+
+    <!-- Dilithium算法列表 -->
+    <string-array name="dilithium_algorithms">
+        <item>Dilithium2</item>
+        <item>Dilithium3</item>
+        <item>Dilithium5</item>
+    </string-array>
+</resources>
