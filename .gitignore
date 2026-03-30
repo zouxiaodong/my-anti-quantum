@@ -1,0 +1,16 @@
+# Build
+target/
+*.class
+
+# IDE
+.idea/
+*.iml
+.gradle/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

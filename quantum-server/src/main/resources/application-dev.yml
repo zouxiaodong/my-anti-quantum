@@ -1,0 +1,3 @@
+encryptor:
+  host: localhost
+  port: 8101
