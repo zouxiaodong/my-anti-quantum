@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun setupButtons() {
-        binding.btnInit.setOnClickListener { }
+        binding.btnInit.setOnClickListener { viewModel.reset() }
         binding.btnGenRandom.setOnClickListener { viewModel.genRandom() }
         
         binding.btnKyber512.setOnClickListener { viewModel.genPqcKeyPair("kyber512") }

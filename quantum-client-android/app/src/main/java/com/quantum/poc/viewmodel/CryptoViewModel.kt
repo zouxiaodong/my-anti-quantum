@@ -42,6 +42,17 @@ class CryptoViewModel : ViewModel() {
         _uiState.value = CryptoUiState.Idle
     }
     
+    fun reset() {
+        _plainText.value = "12345678"
+        _cipherText.value = ""
+        _publicKey.value = ""
+        _privateKey.value = ""
+        _signature.value = ""
+        _verifyResult.value = ""
+        _logMessage.value = "已初始化"
+        _uiState.value = CryptoUiState.Idle
+    }
+    
     fun setPlainText(text: String) {
         _plainText.value = text
     }
