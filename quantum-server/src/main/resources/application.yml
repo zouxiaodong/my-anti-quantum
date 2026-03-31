@@ -16,6 +16,6 @@ encryptor:
 logging:
   level:
     com.quantum.poc: DEBUG
-    org.springframework.web.reactive.function.client: DEBUG
-    reactor.netty: DEBUG
-    io.netty: INFO
+    org.springframework.web.reactive.function.client: INFO
+    reactor.netty: INFO
+    io.netty: WARN
