@@ -18,6 +18,7 @@ enum class SessionState {
 
 data class SessionData(
     val state: SessionState = SessionState.IDLE,
+    val sessionId: String = "",
     val kyberAlgorithm: String = "Kyber512",
     val dilithiumAlgorithm: String = "Dilithium2",
     val publicKey: String = "",
@@ -407,6 +408,241 @@ class CryptoViewModel : ViewModel() {
     
     fun clearLog() {
         _logMessage.value = ""
+    }
+    
+    fun sessionInit() {
+        _uiState.value = CryptoUiState.Loading
+        appendLog("📌 步骤1: 初始化会话 (Kyber + Dilithium)...")
+        
+        val request = SessionInitRequest(
+            kyberAlgorithm = _sessionData.value?.kyberAlgorithm,
+            dilithiumAlgorithm = _sessionData.value?.dilithiumAlgorithm
+        )
+        
+        apiService.sessionInit(request).enqueue(object : Callback<ApiResult<SessionInitResponse>> {
+            override fun onResponse(call: Call<ApiResult<SessionInitResponse>>, response: retrofit2.Response<ApiResult<SessionInitResponse>>) {
+                if (response.isSuccessful && response.body()?.code == 0) {
+                    response.body()?.data?.let { data ->
+                        _sessionData.value = _sessionData.value?.copy(
+                            state = SessionState.KEY_READY,
+                            sessionId = data.sessionId,
+                            publicKey = data.kyberPublicKey,
+                            privateKey = data.kyberPrivateKey
+                        )
+                    }
+                    appendLog("✅ 步骤1完成: 会话已创建 (SessionID: ${_sessionData.value?.sessionId?.take(8)}...)")
+                    _uiState.value = CryptoUiState.Success
+                } else {
+                    val errorMsg = response.body()?.msg ?: "会话初始化失败"
+                    appendLog("❌ 步骤1失败: $errorMsg")
+                    _uiState.value = CryptoUiState.Error(errorMsg)
+                }
+            }
+            
+            override fun onFailure(call: Call<ApiResult<SessionInitResponse>>, t: Throwable) {
+                val errorMsg = t.message ?: "网络错误"
+                appendLog("❌ 步骤1失败: $errorMsg")
+                _uiState.value = CryptoUiState.Error(errorMsg)
+            }
+        })
+    }
+    
+    fun sessionWrapKey() {
+        val sessionId = _sessionData.value?.sessionId
+        if (sessionId.isNullOrEmpty()) {
+            appendLog("⚠️ 请先初始化会话")
+            _uiState.value = CryptoUiState.Error("请先初始化会话")
+            return
+        }
+        
+        _uiState.value = CryptoUiState.Loading
+        appendLog("📌 步骤2: 生成SM4会话密钥 (Kyber包装)...")
+        
+        apiService.sessionWrapKey(sessionId).enqueue(object : Callback<ApiResult<Map<String, String>>> {
+            override fun onResponse(call: Call<ApiResult<Map<String, String>>>, response: retrofit2.Response<ApiResult<Map<String, String>>>) {
+                if (response.isSuccessful && response.body()?.code == 0) {
+                    val data = response.body()?.data
+                    _sessionData.value = _sessionData.value?.copy(
+                        state = SessionState.SESSION_KEY,
+                        sessionKey = data?.get("sessionKey") ?: "",
+                        random = data?.get("sessionKey") ?: ""
+                    )
+                    appendLog("✅ 步骤2完成: 会话密钥已生成")
+                    _uiState.value = CryptoUiState.Success
+                } else {
+                    val errorMsg = response.body()?.msg ?: "密钥包装失败"
+                    appendLog("❌ 步骤2失败: $errorMsg")
+                    _uiState.value = CryptoUiState.Error(errorMsg)
+                }
+            }
+            
+            override fun onFailure(call: Call<ApiResult<Map<String, String>>>, t: Throwable) {
+                val errorMsg = t.message ?: "网络错误"
+                appendLog("❌ 步骤2失败: $errorMsg")
+                _uiState.value = CryptoUiState.Error(errorMsg)
+            }
+        })
+    }
+    
+    fun sessionGenKeys() {
+        val sessionId = _sessionData.value?.sessionId
+        if (sessionId.isNullOrEmpty()) {
+            appendLog("⚠️ 请先初始化会话")
+            _uiState.value = CryptoUiState.Error("请先初始化会话")
+            return
+        }
+        
+        _uiState.value = CryptoUiState.Loading
+        appendLog("📌 步骤3: 生成SM2和Dilithium密钥对...")
+        
+        apiService.sessionGenKeys(sessionId).enqueue(object : Callback<ApiResult<Map<String, String>>> {
+            override fun onResponse(call: Call<ApiResult<Map<String, String>>>, response: retrofit2.Response<ApiResult<Map<String, String>>>) {
+                if (response.isSuccessful && response.body()?.code == 0) {
+                    val data = response.body()?.data
+                    _sessionData.value = _sessionData.value?.copy(
+                        sm2PublicKey = data?.get("sm2PublicKey") ?: "",
+                        sm2PrivateKey = data?.get("sm2PrivateKey") ?: "",
+                        dilithiumPublicKey = data?.get("dilithiumPublicKey") ?: "",
+                        dilithiumPrivateKey = data?.get("dilithiumPrivateKey") ?: ""
+                    )
+                    appendLog("✅ 步骤3完成: SM2和Dilithium密钥对已生成")
+                    _uiState.value = CryptoUiState.Success
+                } else {
+                    val errorMsg = response.body()?.msg ?: "密钥生成失败"
+                    appendLog("❌ 步骤3失败: $errorMsg")
+                    _uiState.value = CryptoUiState.Error(errorMsg)
+                }
+            }
+            
+            override fun onFailure(call: Call<ApiResult<Map<String, String>>>, t: Throwable) {
+                val errorMsg = t.message ?: "网络错误"
+                appendLog("❌ 步骤3失败: $errorMsg")
+                _uiState.value = CryptoUiState.Error(errorMsg)
+            }
+        })
+    }
+    
+    fun sessionEncrypt(sm4Mode: String = "SM4/CBC/NoPadding") {
+        val sessionId = _sessionData.value?.sessionId
+        if (sessionId.isNullOrEmpty()) {
+            appendLog("⚠️ 请先初始化会话")
+            _uiState.value = CryptoUiState.Error("请先初始化会话")
+            return
+        }
+        
+        _uiState.value = CryptoUiState.Loading
+        val sm4ModeName = if (sm4Mode.contains("CBC")) "SM4-CBC" else "SM4-ECB"
+        appendLog("📌 步骤4: $sm4ModeName 加密 + SM2签名...")
+        
+        val plainTextHex = stringToHex(_sessionData.value?.plainText ?: "")
+        val paddedHex = padToBlockSize(plainTextHex, 16)
+        
+        val ivHex = if (sm4Mode.contains("CBC")) {
+            generateRandomHex(32)
+        } else null
+        
+        val request = SessionEncryptRequest(
+            data = paddedHex,
+            sm4Algorithm = sm4Mode,
+            iv = ivHex
+        )
+        
+        apiService.sessionEncrypt(sessionId, request).enqueue(object : Callback<ApiResult<SessionEncryptResponse>> {
+            override fun onResponse(call: Call<ApiResult<SessionEncryptResponse>>, response: retrofit2.Response<ApiResult<SessionEncryptResponse>>) {
+                if (response.isSuccessful && response.body()?.code == 0) {
+                    val data = response.body()?.data
+                    _sessionData.value = _sessionData.value?.copy(
+                        state = SessionState.ENCRYPTED,
+                        cipherText = data?.cipherText ?: "",
+                        iv = ivHex ?: "",
+                        sm2Signature = data?.signature ?: ""
+                    )
+                    appendLog("✅ 步骤4完成: $sm4ModeName 加密 + SM2签名成功")
+                    _uiState.value = CryptoUiState.Success
+                } else {
+                    val errorMsg = response.body()?.msg ?: "加密失败"
+                    appendLog("❌ 步骤4失败: $errorMsg")
+                    _uiState.value = CryptoUiState.Error(errorMsg)
+                }
+            }
+            
+            override fun onFailure(call: Call<ApiResult<SessionEncryptResponse>>, t: Throwable) {
+                val errorMsg = t.message ?: "网络错误"
+                appendLog("❌ 步骤4失败: $errorMsg")
+                _uiState.value = CryptoUiState.Error(errorMsg)
+            }
+        })
+    }
+    
+    fun sessionDecrypt(sm4Mode: String = "SM4/CBC/NoPadding") {
+        val sessionId = _sessionData.value?.sessionId
+        if (sessionId.isNullOrEmpty()) {
+            appendLog("⚠️ 请先初始化会话")
+            _uiState.value = CryptoUiState.Error("请先初始化会话")
+            return
+        }
+        
+        val cipherText = _sessionData.value?.cipherText
+        if (cipherText.isNullOrEmpty()) {
+            appendLog("⚠️ 请先执行加密操作")
+            _uiState.value = CryptoUiState.Error("请先执行加密操作")
+            return
+        }
+        
+        _uiState.value = CryptoUiState.Loading
+        val sm4ModeName = if (sm4Mode.contains("CBC")) "SM4-CBC" else "SM4-ECB"
+        appendLog("📌 步骤5: $sm4ModeName 解密 + SM2验签...")
+        
+        val request = SessionDecryptRequest(
+            cipherText = cipherText,
+            signature = _sessionData.value?.sm2Signature ?: "",
+            sm4Algorithm = sm4Mode,
+            iv = _sessionData.value?.iv
+        )
+        
+        apiService.sessionDecrypt(sessionId, request).enqueue(object : Callback<ApiResult<SessionDecryptResponse>> {
+            override fun onResponse(call: Call<ApiResult<SessionDecryptResponse>>, response: retrofit2.Response<ApiResult<SessionDecryptResponse>>) {
+                if (response.isSuccessful && response.body()?.code == 0) {
+                    val data = response.body()?.data
+                    val decryptedHex = data?.plainText ?: ""
+                    val plainText = removePadding(decryptedHex)
+                    val verifyResult = data?.sm2VerifyResult ?: false
+                    
+                    _sessionData.value = _sessionData.value?.copy(
+                        plainText = plainText,
+                        decryptResult = if (verifyResult) "✅ 解密成功" else "❌ SM2验签失败",
+                        sm2VerifyResult = if (verifyResult) "✅ SM2验签成功" else "❌ SM2验签失败"
+                    )
+                    appendLog(if (verifyResult) "✅ 步骤5完成: $sm4ModeName 解密成功 + SM2验签成功" else "❌ 步骤5失败: SM2验签失败")
+                    _uiState.value = CryptoUiState.Success
+                } else {
+                    val errorMsg = response.body()?.msg ?: "解密失败"
+                    _sessionData.value = _sessionData.value?.copy(decryptResult = "❌ $errorMsg")
+                    appendLog("❌ 步骤5失败: $errorMsg")
+                    _uiState.value = CryptoUiState.Error(errorMsg)
+                }
+            }
+            
+            override fun onFailure(call: Call<ApiResult<SessionDecryptResponse>>, t: Throwable) {
+                val errorMsg = t.message ?: "网络错误"
+                _sessionData.value = _sessionData.value?.copy(decryptResult = "❌ $errorMsg")
+                appendLog("❌ 步骤5失败: $errorMsg")
+                _uiState.value = CryptoUiState.Error(errorMsg)
+            }
+        })
+    }
+    
+    fun sessionFullFlow() {
+        appendLog("🚀 开始执行Session完整流程...")
+        appendLog("组合: ${_sessionData.value?.kyberAlgorithm} + SM4-CBC + ${_sessionData.value?.dilithiumAlgorithm} + SM2")
+        
+        sessionInit()
+    }
+    
+    fun reset() {
+        _sessionData.value = SessionData()
+        _logMessage.value = "✅ 会话已重置"
+        _uiState.value = CryptoUiState.Idle
     }
     
     // SM2 methods

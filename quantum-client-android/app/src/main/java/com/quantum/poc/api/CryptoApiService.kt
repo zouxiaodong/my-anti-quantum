@@ -50,4 +50,31 @@ interface CryptoApiService {
     
     @POST("api/crypto/decrypt")
     fun hybridDecrypt(@Body request: HybridDecryptRequest): Call<ApiResult<HybridDecryptResponse>>
+    
+    @POST("api/crypto/session/init")
+    fun sessionInit(@Body request: SessionInitRequest): Call<ApiResult<SessionInitResponse>>
+    
+    @GET("api/crypto/session")
+    fun sessionGet(@Header("X-Session-Id") sessionId: String): Call<ApiResult<SessionInitResponse>>
+    
+    @DELETE("api/crypto/session")
+    fun sessionDelete(@Header("X-Session-Id") sessionId: String): Call<ApiResult<String>>
+    
+    @POST("api/crypto/session/wrapKey")
+    fun sessionWrapKey(@Header("X-Session-Id") sessionId: String): Call<ApiResult<Map<String, String>>>
+    
+    @POST("api/crypto/session/genKeys")
+    fun sessionGenKeys(@Header("X-Session-Id") sessionId: String): Call<ApiResult<Map<String, String>>>
+    
+    @POST("api/crypto/session/encrypt")
+    fun sessionEncrypt(
+        @Header("X-Session-Id") sessionId: String,
+        @Body request: SessionEncryptRequest
+    ): Call<ApiResult<SessionEncryptResponse>>
+    
+    @POST("api/crypto/session/decrypt")
+    fun sessionDecrypt(
+        @Header("X-Session-Id") sessionId: String,
+        @Body request: SessionDecryptRequest
+    ): Call<ApiResult<SessionDecryptResponse>>
 }

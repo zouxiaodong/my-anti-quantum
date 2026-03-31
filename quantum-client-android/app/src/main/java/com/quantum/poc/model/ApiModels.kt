@@ -89,3 +89,40 @@ data class HybridDecryptResponse(
     @SerializedName("plainText") val plainText: String?,
     @SerializedName("verifyResult") val verifyResult: Boolean
 )
+
+data class SessionInitRequest(
+    @SerializedName("kyberAlgorithm") val kyberAlgorithm: String? = null,
+    @SerializedName("dilithiumAlgorithm") val dilithiumAlgorithm: String? = null
+)
+
+data class SessionInitResponse(
+    @SerializedName("sessionId") val sessionId: String,
+    @SerializedName("kyberAlgorithm") val kyberAlgorithm: String,
+    @SerializedName("dilithiumAlgorithm") val dilithiumAlgorithm: String,
+    @SerializedName("kyberPublicKey") val kyberPublicKey: String,
+    @SerializedName("kyberPrivateKey") val kyberPrivateKey: String,
+    @SerializedName("message") val message: String? = null
+)
+
+data class SessionEncryptRequest(
+    @SerializedName("data") val data: String,
+    @SerializedName("sm4Algorithm") val sm4Algorithm: String = "SM4/CBC/NoPadding",
+    @SerializedName("iv") val iv: String? = null
+)
+
+data class SessionEncryptResponse(
+    @SerializedName("cipherText") val cipherText: String,
+    @SerializedName("signature") val signature: String
+)
+
+data class SessionDecryptRequest(
+    @SerializedName("cipherText") val cipherText: String,
+    @SerializedName("signature") val signature: String,
+    @SerializedName("sm4Algorithm") val sm4Algorithm: String = "SM4/CBC/NoPadding",
+    @SerializedName("iv") val iv: String? = null
+)
+
+data class SessionDecryptResponse(
+    @SerializedName("plainText") val plainText: String?,
+    @SerializedName("sm2VerifyResult") val sm2VerifyResult: Boolean
+)
