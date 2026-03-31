@@ -439,8 +439,8 @@ class CryptoViewModel : ViewModel() {
     }
     
     fun sm2Sign() {
-        val publicKey = _sessionData.value?.sm2PublicKey
-        if (publicKey.isNullOrEmpty()) {
+        val privateKey = _sessionData.value?.sm2PrivateKey
+        if (privateKey.isNullOrEmpty()) {
             appendLog("⚠️ 请先生成SM2密钥对")
             _uiState.value = CryptoUiState.Error("请先生成SM2密钥对")
             return
@@ -449,14 +449,13 @@ class CryptoViewModel : ViewModel() {
         _uiState.value = CryptoUiState.Loading
         appendLog("📌 SM2: 签名...")
         
-        // SM2加密需要Hex格式和公钥
         val plainTextHex = stringToHex(_sessionData.value?.plainText ?: "")
         val request = Sm2Request(
             data = plainTextHex,
-            publicKey = publicKey
+            privateKey = privateKey
         )
         
-        apiService.sm2Encrypt(request).enqueue(object : Callback<ApiResult<String>> {
+        apiService.sm2Sign(request).enqueue(object : Callback<ApiResult<String>> {
             override fun onResponse(call: Call<ApiResult<String>>, response: retrofit2.Response<ApiResult<String>>) {
                 if (response.isSuccessful && response.body()?.code == 0) {
                     _sessionData.value = _sessionData.value?.copy(
@@ -488,9 +487,37 @@ class CryptoViewModel : ViewModel() {
             return
         }
         
-        val result = if (signature.isNotEmpty()) "✅ SM2验签成功" else "❌ SM2验签失败"
-        _sessionData.value = _sessionData.value?.copy(verifyResult = result)
-        appendLog("📌 $result")
+        _uiState.value = CryptoUiState.Loading
+        appendLog("📌 SM2: 验签...")
+        
+        val plainTextHex = stringToHex(_sessionData.value?.plainText ?: "")
+        val request = Sm2VerifyRequest(
+            data = plainTextHex,
+            signature = signature,
+            publicKey = publicKey
+        )
+        
+        apiService.sm2Verify(request).enqueue(object : Callback<ApiResult<String>> {
+            override fun onResponse(call: Call<ApiResult<String>>, response: retrofit2.Response<ApiResult<String>>) {
+                if (response.isSuccessful && response.body()?.code == 0) {
+                    val isValid = response.body()?.data == "true"
+                    val result = if (isValid) "✅ SM2验签成功" else "❌ SM2验签失败"
+                    _sessionData.value = _sessionData.value?.copy(verifyResult = result)
+                    appendLog(result)
+                    _uiState.value = CryptoUiState.Success
+                } else {
+                    val errorMsg = response.body()?.msg ?: "SM2验签失败"
+                    appendLog("❌ SM2: $errorMsg")
+                    _uiState.value = CryptoUiState.Error(errorMsg)
+                }
+            }
+            
+            override fun onFailure(call: Call<ApiResult<String>>, t: Throwable) {
+                val errorMsg = t.message ?: "网络错误"
+                appendLog("❌ SM2: $errorMsg")
+                _uiState.value = CryptoUiState.Error(errorMsg)
+            }
+        })
     }
 }
 

@@ -104,6 +104,26 @@ public class CryptoController {
                 });
     }
     
+    @PostMapping("/sm2/sign")
+    public Mono<ResponseEntity<Result<String>>> sm2Sign(@Valid @RequestBody Sm2Request request) {
+        log.info("[Controller] 收到 sm2Sign 请求");
+        return cryptoGatewayService.sm2Sign(request)
+                .map(result -> {
+                    log.info("[Controller] sm2Sign 响应: code={}", result.getCode());
+                    return ResponseEntity.ok(result);
+                });
+    }
+    
+    @PostMapping("/sm2/verify")
+    public Mono<ResponseEntity<Result<String>>> sm2Verify(@Valid @RequestBody Sm2VerifyRequest request) {
+        log.info("[Controller] 收到 sm2Verify 请求");
+        return cryptoGatewayService.sm2Verify(request)
+                .map(result -> {
+                    log.info("[Controller] sm2Verify 响应: code={}", result.getCode());
+                    return ResponseEntity.ok(result);
+                });
+    }
+    
     @PostMapping("/pqc/genKeyPair")
     public Mono<ResponseEntity<Result<Map>>> genPqcKeyPair(@Valid @RequestBody KeyPairRequest request) {
         log.info("[Controller] 收到 genPqcKeyPair 请求, algorithm={}", request.getAlgorithm());

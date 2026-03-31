@@ -1,19 +1,25 @@
 package com.quantum.mock.service;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.jce.spec.ECParameterSpec;
+import org.bouncycastle.jce.spec.ECPrivateKeySpec;
+import org.bouncycastle.jce.spec.ECPublicKeySpec;
+import org.bouncycastle.math.ec.ECPoint;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Cipher;
+import javax.crypto.Signature;
 import java.security.*;
 import java.security.spec.ECGenParameterSpec;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 @Service
 public class Sm2Service {
+
+    private static final String SM2_SIGNATURE_ALGORITHM = "SM3withSM2";
 
     static {
         Security.addProvider(new BouncyCastleProvider());
@@ -27,7 +33,7 @@ public class Sm2Service {
         byte[] privateEncoded = keyPair.getPrivate().getEncoded();
         byte[] publicEncoded = keyPair.getPublic().getEncoded();
 
-        Map<String, String> result = new java.util.HashMap<>();
+        Map<String, String> result = new HashMap<>();
         result.put("privateKey", bytesToHex(privateEncoded));
         result.put("publicKey", bytesToHex(publicEncoded));
         result.put("keyId", java.util.UUID.randomUUID().toString());
@@ -60,6 +66,36 @@ public class Sm2Service {
         cipher.init(Cipher.DECRYPT_MODE, privateKey);
         byte[] decrypted = cipher.doFinal(dataBytes);
         return bytesToHex(decrypted);
+    }
+
+    public String sign(String data, String privateKeyHex) throws Exception {
+        byte[] dataBytes = hexToBytes(data);
+        byte[] privateKeyBytes = hexToBytes(privateKeyHex);
+
+        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(privateKeyBytes);
+        KeyFactory keyFactory = KeyFactory.getInstance("EC", "BC");
+        PrivateKey privateKey = keyFactory.generatePrivate(keySpec);
+
+        Signature signature = Signature.getInstance(SM2_SIGNATURE_ALGORITHM, "BC");
+        signature.initSign(privateKey);
+        signature.update(dataBytes);
+        byte[] signed = signature.sign();
+        return bytesToHex(signed);
+    }
+
+    public boolean verify(String data, String signatureHex, String publicKeyHex) throws Exception {
+        byte[] dataBytes = hexToBytes(data);
+        byte[] signatureBytes = hexToBytes(signatureHex);
+        byte[] publicKeyBytes = hexToBytes(publicKeyHex);
+
+        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicKeyBytes);
+        KeyFactory keyFactory = KeyFactory.getInstance("EC", "BC");
+        PublicKey publicKey = keyFactory.generatePublic(keySpec);
+
+        Signature signature = Signature.getInstance(SM2_SIGNATURE_ALGORITHM, "BC");
+        signature.initVerify(publicKey);
+        signature.update(dataBytes);
+        return signature.verify(signatureBytes);
     }
 
     private byte[] hexToBytes(String hex) {

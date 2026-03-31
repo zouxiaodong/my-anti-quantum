@@ -31,6 +31,12 @@ data class Sm2Request(
     @SerializedName("publicKey") val publicKey: String? = null
 )
 
+data class Sm2VerifyRequest(
+    @SerializedName("data") val data: String,
+    @SerializedName("signature") val signature: String,
+    @SerializedName("publicKey") val publicKey: String
+)
+
 data class KeyPairRequest(
     @SerializedName("algorithm") val algorithm: String
 )

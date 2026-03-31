@@ -114,6 +114,28 @@ public class CryptoGatewayService {
         );
     }
 
+    public Mono<Result<String>> sm2Sign(Sm2Request request) {
+        logRequest("sm2Sign", request);
+        return doRequest(
+                "/scyh-server/v101/sm2Sign",
+                request,
+                new ParameterizedTypeReference<Result<String>>() {},
+                "sm2Sign",
+                null
+        );
+    }
+
+    public Mono<Result<String>> sm2Verify(Sm2VerifyRequest request) {
+        logRequest("sm2Verify", request);
+        return doRequest(
+                "/scyh-server/v101/sm2Verify",
+                request,
+                new ParameterizedTypeReference<Result<String>>() {},
+                "sm2Verify",
+                null
+        );
+    }
+
     public Mono<Result<Map>> genPqcKeyPair(KeyPairRequest request) {
         logRequest("genPqcKeyPair", Map.of("algorithm", request.getAlgorithm()));
         return doRequest(

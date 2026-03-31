@@ -30,6 +30,12 @@ interface CryptoApiService {
     @POST("api/crypto/sm2/decrypt")
     fun sm2Decrypt(@Body request: Sm2Request): Call<ApiResult<String>>
     
+    @POST("api/crypto/sm2/sign")
+    fun sm2Sign(@Body request: Sm2Request): Call<ApiResult<String>>
+    
+    @POST("api/crypto/sm2/verify")
+    fun sm2Verify(@Body request: Sm2VerifyRequest): Call<ApiResult<String>>
+    
     @POST("api/crypto/pqc/genKeyPair")
     fun genPqcKeyPair(@Body request: KeyPairRequest): Call<ApiResult<PqcKeyPairResponse>>
     

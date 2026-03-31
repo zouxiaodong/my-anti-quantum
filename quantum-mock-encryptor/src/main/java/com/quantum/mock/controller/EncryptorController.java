@@ -116,6 +116,35 @@ public class EncryptorController {
         }
     }
 
+    @PostMapping("/sm2Sign")
+    public ResponseEntity<Result<String>> sm2Sign(@Valid @RequestBody Sm2Request request) {
+        try {
+            if (request.getPrivateKey() == null || request.getPrivateKey().isEmpty()) {
+                return ResponseEntity.ok(Result.error(1, "SM2签名需要私钥"));
+            }
+            String signature = sm2Service.sign(request.getData(), request.getPrivateKey());
+            return ResponseEntity.ok(Result.success(signature));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Result.error(1, "SM2签名失败: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/sm2Verify")
+    public ResponseEntity<Result<String>> sm2Verify(@Valid @RequestBody Sm2VerifyRequest request) {
+        try {
+            if (request.getPublicKey() == null || request.getPublicKey().isEmpty()) {
+                return ResponseEntity.ok(Result.error(1, "SM2验签需要公钥"));
+            }
+            if (request.getSignature() == null || request.getSignature().isEmpty()) {
+                return ResponseEntity.ok(Result.error(1, "SM2验签需要签名"));
+            }
+            boolean valid = sm2Service.verify(request.getData(), request.getSignature(), request.getPublicKey());
+            return ResponseEntity.ok(Result.success(valid ? "true" : "false"));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Result.error(1, "SM2验签失败: " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/genPqcKeyPair")
     public ResponseEntity<Result<Map>> genPqcKeyPair(@Valid @RequestBody KeyPairRequest request) {
         try {
