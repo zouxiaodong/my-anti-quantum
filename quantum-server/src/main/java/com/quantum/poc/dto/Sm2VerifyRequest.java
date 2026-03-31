@@ -13,4 +13,6 @@ public class Sm2VerifyRequest {
     
     @NotBlank(message = "公钥不能为空")
     private String publicKey;
+    
+    private String algorithm;
 }

@@ -4,11 +4,11 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
-public class Sm2Request {
+public class SessionEncryptRequest {
     @NotBlank(message = "数据不能为空")
     private String data;
     
-    private String privateKey;
-    private String publicKey;
-    private String algorithm;
+    private String sm4Algorithm = "SM4/CBC/NoPadding";
+    
+    private String iv;
 }

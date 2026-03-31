@@ -7,4 +7,10 @@ import lombok.Data;
 public class KeyPairRequest {
     @NotBlank(message = "算法不能为空")
     private String algorithm;
+    
+    public KeyPairRequest() {}
+    
+    public KeyPairRequest(String algorithm) {
+        this.algorithm = algorithm;
+    }
 }
