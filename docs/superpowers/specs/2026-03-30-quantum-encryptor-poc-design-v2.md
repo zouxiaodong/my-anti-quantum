@@ -100,29 +100,31 @@
                     │   初始状态   │
                     │   (IDLE)    │
                     └──────┬───────┘
-                           │ 创建会话
+                           │ sessionInit()
                            ▼
                     ┌──────────────┐
-         ┌──────────│ 密钥协商完成 │──────────┐
-         │          │ (KEY_READY) │          │
-         │          └──────┬───────┘          │
-         │                 │                  │
-    生成会话密钥        生成会话密钥         生成会话密钥
-         │                 │                  │
-         ▼                 ▼                  ▼
-  ┌────────────┐   ┌────────────┐    ┌────────────┐
-  │ 会话密钥就绪│   │ 会话密钥就绪│    │ 会话密钥就绪│
-  │(SESSION_KEY)│   │(SESSION_KEY)│    │(SESSION_KEY)│
-  └─────┬──────┘   └─────┬──────┘    └─────┬──────┘
-        │                │                 │
-   加密/解密         加密/解密          加密/解密
-        │                │                 │
-        ▼                ▼                 ▼
-  ┌────────────┐   ┌────────────┐    ┌────────────┐
-  │ 数据操作   │   │ 数据操作   │    │ 数据操作   │
-  │ (ENCRYPTED)│   │ (ENCRYPTED)│    │ (ENCRYPTED)│
-  └────────────┘   └────────────┘    └────────────┘
+          ┌──────────│ 密钥协商完成 │──────────┐
+          │          │ (KEY_READY) │          │
+          │          └──────┬───────┘          │
+          │                 │                  │
+     sessionWrapKey   sessionWrapKey    sessionWrapKey
+          │                 │                  │
+          ▼                 ▼                  ▼
+   ┌────────────┐   ┌────────────┐    ┌────────────┐
+   │ 会话密钥就绪│   │ 会话密钥就绪│    │ 会话密钥就绪│
+   │(SESSION_KEY)│   │(SESSION_KEY)│    │(SESSION_KEY)│
+   └─────┬──────┘   └─────┬──────┘    └─────┬──────┘
+         │                │                 │
+    sessionEncrypt   sessionEncrypt     sessionEncrypt
+         │                │                 │
+         ▼                ▼                 ▼
+   ┌────────────┐   ┌────────────┐    ┌────────────┐
+   │ 数据已加密  │   │ 数据已加密  │    │ 数据已加密  │
+   │ (ENCRYPTED)│   │ (ENCRYPTED)│    │ (ENCRYPTED)│
+   └────────────┘   └────────────┘    └────────────┘
 ```
+
+> **注意**: v2.1新增服务端会话管理，会话状态由服务端SessionService管理，客户端通过X-Session-Id Header传递会话ID
 
 ### 2.3 加密机接口映射
 
@@ -139,6 +141,18 @@
 | `/api/crypto/pqc/genKeyPair` | `/genPqcKeyPair` | `/scyh-server/v101/genPqcKeyPair` | PQC密钥对生成 |
 | `/api/crypto/pqc/wrapKey` | `/pqcKeyWrapper` | `/scyh-server/v101/pqcKeyWrapper` | PQC公钥封装 |
 | `/api/crypto/pqc/unwrapKey` | `/pqcKeyUnWrapper` | `/scyh-server/v101/pqcKeyUnWrapper` | PQC私钥解封 |
+
+### 2.4 服务端会话管理API (v2.1新增)
+
+| 功能 | API调用 | Header | 说明 |
+|------|---------|--------|------|
+| 初始化会话 | POST /api/crypto/session/init | - | 创建会话，生成Kyber密钥对，返回sessionId |
+| 查询会话 | GET /api/crypto/session | X-Session-Id | 获取会话信息 |
+| 删除会话 | DELETE /api/crypto/session | X-Session-Id | 删除会话 |
+| 密钥包装 | POST /api/crypto/session/wrapKey | X-Session-Id | 生成SM4会话密钥，用Kyber公钥封装 |
+| 生成签名密钥 | POST /api/crypto/session/genKeys | X-Session-Id | 生成SM2和Dilithium密钥对 |
+| 会话加密 | POST /api/crypto/session/encrypt | X-Session-Id | SM4加密 + SM2签名 |
+| 会话解密 | POST /api/crypto/session/decrypt | X-Session-Id | SM2验签 + SM4解密 |
 
 ---
 

@@ -167,6 +167,18 @@ mvn spring-boot:run
 | 3 | 点击「一键执行完整流程」 | 自动完成所有步骤 |
 | 4 | 查看日志 | 显示完整执行过程 |
 
+### Session-based 完整流程 (推荐)
+
+使用服务端会话管理，SessionID 通过 Header 传递：
+
+| 步骤 | 操作 | API调用 | 状态 |
+|------|------|---------|------|
+| 1 | 初始化会话 | POST /api/crypto/session/init | KEY_READY |
+| 2 | 密钥包装 | POST /api/crypto/session/wrapKey | SESSION_KEY |
+| 3 | 生成签名密钥 | POST /api/crypto/session/genKeys | - |
+| 4 | 加密+签名 | POST /api/crypto/session/encrypt | ENCRYPTED |
+| 5 | 解密+验签 | POST /api/crypto/session/decrypt | - |
+
 ---
 
 ## 算法选择说明
@@ -198,12 +210,19 @@ mvn spring-boot:run
 
 ## API接口对照表
 
-### 会话管理接口
+### 会话管理接口 (Server-side Session)
 
-| 功能 | API调用 | 说明 |
-|------|---------|------|
-| 新建会话 | 本地状态管理 | 重置所有密钥状态 |
-| 获取会话状态 | 本地状态 | 返回当前会话阶段 |
+| 功能 | API调用 | Header | 说明 |
+|------|---------|--------|------|
+| 初始化会话 | POST /api/crypto/session/init | - | 创建会话，生成Kyber密钥对 |
+| 查询会话 | GET /api/crypto/session | X-Session-Id | 获取会话信息 |
+| 删除会话 | DELETE /api/crypto/session | X-Session-Id | 删除会话 |
+| 密钥包装 | POST /api/crypto/session/wrapKey | X-Session-Id | 生成SM4会话密钥并用Kyber包装 |
+| 生成签名密钥 | POST /api/crypto/session/genKeys | X-Session-Id | 生成SM2和Dilithium密钥对 |
+| 会话加密 | POST /api/crypto/session/encrypt | X-Session-Id | SM4加密 + SM2签名 |
+| 会话解密 | POST /api/crypto/session/decrypt | X-Session-Id | SM2验签 + SM4解密 |
+
+> **注意**: SessionID 通过 `X-Session-Id` Header 传递，不在URL路径中，更安全
 
 ### 密钥协商接口
 
@@ -260,3 +279,4 @@ python3 ../test_mock.py
 |------|------|---------|
 | 1.0 | 2026-03-30 | 初始版本，按钮式UI |
 | 2.0 | 2026-03-30 | 会话流程UI，完整流程测试 |
+| 2.1 | 2026-03-31 | 服务端会话管理，X-Session-Id Header，SM2签名集成 |
