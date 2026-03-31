@@ -34,7 +34,7 @@ public class CryptoGatewayService {
                 "/scyh-server/v101/genRandom?length=" + length,
                 new ParameterizedTypeReference<Result<String>>() {},
                 "genRandom",
-                r -> log.info("[RESPONSE] genRandom success, data={}", truncate(r.getData(), 100))
+                null
         );
     }
 
@@ -45,7 +45,7 @@ public class CryptoGatewayService {
                 request,
                 new ParameterizedTypeReference<Result<String>>() {},
                 "sm4Encrypt",
-                r -> log.info("[RESPONSE] sm4Encrypt success, data={}", truncate(r.getData(), 100))
+                null
         );
     }
 
@@ -56,7 +56,7 @@ public class CryptoGatewayService {
                 request,
                 new ParameterizedTypeReference<Result<String>>() {},
                 "sm4Decrypt",
-                r -> log.info("[RESPONSE] sm4Decrypt success, data={}", truncate(r.getData(), 100))
+                null
         );
     }
 
@@ -67,7 +67,7 @@ public class CryptoGatewayService {
                 request,
                 new ParameterizedTypeReference<Result<String>>() {},
                 "hash",
-                r -> log.info("[RESPONSE] hash success, data={}", r.getData())
+                null
         );
     }
 
@@ -78,7 +78,7 @@ public class CryptoGatewayService {
                 request,
                 new ParameterizedTypeReference<Result<String>>() {},
                 "hmac",
-                r -> log.info("[RESPONSE] hmac success, data={}", r.getData())
+                null
         );
     }
 
@@ -88,7 +88,7 @@ public class CryptoGatewayService {
                 "/scyh-server/v101/genEccKeyPair",
                 new ParameterizedTypeReference<Result<Map>>() {},
                 "genEccKeyPair",
-                r -> log.info("[RESPONSE] genEccKeyPair success, keys={}", r.getData())
+                null
         );
     }
 
@@ -99,7 +99,7 @@ public class CryptoGatewayService {
                 request,
                 new ParameterizedTypeReference<Result<String>>() {},
                 "sm2Encrypt",
-                r -> log.info("[RESPONSE] sm2Encrypt success, data={}", truncate(r.getData(), 100))
+                null
         );
     }
 
@@ -110,7 +110,7 @@ public class CryptoGatewayService {
                 request,
                 new ParameterizedTypeReference<Result<String>>() {},
                 "sm2Decrypt",
-                r -> log.info("[RESPONSE] sm2Decrypt success, data={}", truncate(r.getData(), 100))
+                null
         );
     }
 
@@ -121,7 +121,7 @@ public class CryptoGatewayService {
                 java.util.Map.of("algorithm", request.getAlgorithm()),
                 new ParameterizedTypeReference<Result<Map>>() {},
                 "genPqcKeyPair",
-                r -> log.info("[RESPONSE] genPqcKeyPair success, keys={}", r.getData())
+                null
         );
     }
 
@@ -132,9 +132,7 @@ public class CryptoGatewayService {
                 request,
                 new ParameterizedTypeReference<Result<PqcKeyWrapperResponse>>() {},
                 "pqcKeyWrapper",
-                r -> log.info("[RESPONSE] pqcKeyWrapper success, keyCipher={}, keyId={}",
-                        r.getData() != null ? truncate(r.getData().getKeyCipher(), 50) : null,
-                        r.getData() != null ? r.getData().getKeyId() : null)
+                null
         );
     }
 
@@ -145,7 +143,7 @@ public class CryptoGatewayService {
                 request,
                 new ParameterizedTypeReference<Result<String>>() {},
                 "pqcKeyUnwrapper",
-                r -> log.info("[RESPONSE] pqcKeyUnwrapper success, data={}", r.getData())
+                null
         );
     }
 
