@@ -33,6 +33,7 @@ data class SessionData(
     val sm2PublicKey: String = "",
     val sm2PrivateKey: String = "",
     val sm2Signature: String = "",
+    val sm2VerifyResult: String = "",
     // Decrypt result
     val decryptResult: String = "",
     // Dilithium签名密钥对
@@ -502,7 +503,7 @@ class CryptoViewModel : ViewModel() {
                 if (response.isSuccessful && response.body()?.code == 0) {
                     val isValid = response.body()?.data == "true"
                     val result = if (isValid) "✅ SM2验签成功" else "❌ SM2验签失败"
-                    _sessionData.value = _sessionData.value?.copy(verifyResult = result)
+                    _sessionData.value = _sessionData.value?.copy(sm2VerifyResult = result)
                     appendLog(result)
                     _uiState.value = CryptoUiState.Success
                 } else {

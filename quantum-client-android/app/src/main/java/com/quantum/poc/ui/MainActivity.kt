@@ -81,6 +81,7 @@ class MainActivity : AppCompatActivity() {
             binding.etSm2PublicKey.setText(session.sm2PublicKey)
             binding.etSm2PrivateKey.setText(session.sm2PrivateKey)
             binding.etSm2Signature.setText(session.sm2Signature)
+            binding.tvSm2VerifyResult.text = session.sm2VerifyResult
             
             // 不重置明文，避免覆盖用户输入
             

@@ -441,6 +441,14 @@
                 android:text="SM2验签"/>
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/tvSm2VerifyResult"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text=""
+            android:textSize="14sp"/>
+
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
