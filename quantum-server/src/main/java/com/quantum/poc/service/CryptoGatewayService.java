@@ -154,13 +154,6 @@ public class CryptoGatewayService {
                 .bodyValue(body != null ? body : "")
                 .retrieve()
                 .bodyToMono(typeRef)
-                .doOnSuccess(successHandler.andThen(r -> {
-                    if (r instanceof Result) {
-                        log.info("[COMPLETE] {} with code={}", operationName, ((Result<?>) r).getCode());
-                    } else {
-                        log.info("[COMPLETE] {}", operationName);
-                    }
-                }))
                 .doOnError(error -> log.error("[ERROR] {} failed: {}, type={}",
                         operationName, error.getMessage(), error.getClass().getSimpleName()));
     }

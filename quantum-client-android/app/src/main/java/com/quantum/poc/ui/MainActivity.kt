@@ -1,6 +1,7 @@
 package com.quantum.poc.ui
 
 import android.os.Bundle
+import android.view.View
 import android.widget.AdapterView
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -20,6 +21,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        
+        // 设置默认明文
+        binding.etPlainText.setText("12345678")
         
         setupSpinners()
         setupObservers()
@@ -57,8 +61,8 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun updateFullFlowText() {
-        val kyber = binding.spinnerKyber.selectedItem ?: "Kyber512"
-        val dilithium = binding.spinnerDilithium.selectedItem ?: "Dilithium2"
+        val kyber = binding.spinnerKyber.selectedItem?.toString() ?: "Kyber512"
+        val dilithium = binding.spinnerDilithium.selectedItem?.toString() ?: "Dilithium2"
         binding.tvFullFlow.text = "$kyber + SM4-CBC + $dilithium"
     }
     
@@ -68,16 +72,36 @@ class MainActivity : AppCompatActivity() {
             binding.etPrivateKey.setText(session.privateKey)
             binding.etRandom.setText(session.random)
             binding.etSessionKey.setText(session.sessionKey)
-            binding.etPlainText.setText(session.plainText)
             binding.etCipherText.setText(session.cipherText)
             binding.etSignature.setText(session.signature)
             binding.etVerifyResult.setText(session.verifyResult)
+            binding.tvDecryptResult.text = session.decryptResult
+            binding.etDilithiumPublicKey.setText(session.dilithiumPublicKey)
+            
+            binding.etSm2PublicKey.setText(session.sm2PublicKey)
+            binding.etSm2PrivateKey.setText(session.sm2PrivateKey)
+            binding.etSm2Signature.setText(session.sm2Signature)
+            
+            // 不重置明文，避免覆盖用户输入
             
             updateSessionStatus(session.state)
         }
         
+        // 明文输入变化时更新ViewModel
+        binding.etPlainText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                viewModel.setPlainText(s?.toString() ?: "")
+            }
+        })
+        
         viewModel.logMessage.observe(this) { log ->
-            binding.tvLog.text = log + "\n" + binding.tvLog.text
+            if (log.isEmpty()) {
+                binding.tvLog.text = ""
+            } else {
+                binding.tvLog.text = log + "\n" + binding.tvLog.text
+            }
         }
         
         viewModel.uiState.observe(this) { state ->
@@ -139,8 +163,18 @@ class MainActivity : AppCompatActivity() {
         
         binding.btnSign.setOnClickListener { viewModel.sign() }
         
+        binding.btnGenDilithiumKey.setOnClickListener { viewModel.genDilithiumKeyPair() }
+        
         binding.btnVerify.setOnClickListener { viewModel.verify() }
         
+        binding.btnSm2GenKey.setOnClickListener { viewModel.sm2GenKey() }
+        
+        binding.btnSm2Sign.setOnClickListener { viewModel.sm2Sign() }
+        
+        binding.btnSm2Verify.setOnClickListener { viewModel.sm2Verify() }
+        
         binding.btnFullFlow.setOnClickListener { viewModel.fullFlow() }
+        
+        binding.btnClearLog.setOnClickListener { viewModel.clearLog() }
     }
 }

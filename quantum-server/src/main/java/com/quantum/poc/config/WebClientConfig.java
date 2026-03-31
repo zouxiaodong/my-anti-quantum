@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -29,21 +30,13 @@ public class WebClientConfig {
     }
     
     private ExchangeFilterFunction loggingFilter() {
-        return ExchangeFilterFunction.ofRequestProcessor(clientRequest -> {
-            log.info("==================== HTTP 请求 ====================");
-            log.info("  URL: {} {}", clientRequest.method(), clientRequest.url());
-            log.info("  Headers: {}", clientRequest.headers());
-            if (log.isDebugEnabled()) {
-                log.debug("  Request body: {}", clientRequest.body());
-            }
-            log.info("====================================================");
-            return Mono.just(clientRequest);
-        }).andThen(ExchangeFilterFunction.ofResponseProcessor(clientResponse -> {
-            log.info("==================== HTTP 响应 ====================");
-            log.info("  Status: {}", clientResponse.statusCode());
-            log.info("  Headers: {}", clientResponse.headers());
-            log.info("====================================================");
-            return Mono.just(clientResponse);
-        }));
+        return (clientRequest, next) -> {
+            log.info("[请求] {} {}", clientRequest.method(), clientRequest.url());
+            return next.exchange(clientRequest)
+                .doOnNext(clientResponse -> {
+                    HttpStatus status = (HttpStatus) clientResponse.statusCode();
+                    log.info("[响应] HTTP {} - {}", status.value(), status.getReasonPhrase());
+                });
+        };
     }
 }

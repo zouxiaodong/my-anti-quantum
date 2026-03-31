@@ -26,8 +26,18 @@ data class SessionData(
     val sessionKey: String = "",
     val plainText: String = "12345678",
     val cipherText: String = "",
+    val iv: String = "",
     val signature: String = "",
-    val verifyResult: String = ""
+    val verifyResult: String = "",
+    // SM2 fields
+    val sm2PublicKey: String = "",
+    val sm2PrivateKey: String = "",
+    val sm2Signature: String = "",
+    // Decrypt result
+    val decryptResult: String = "",
+    // Dilithium签名密钥对
+    val dilithiumPublicKey: String = "",
+    val dilithiumPrivateKey: String = ""
 )
 
 class CryptoViewModel : ViewModel() {
@@ -97,9 +107,9 @@ class CryptoViewModel : ViewModel() {
     
     fun genRandom() {
         _uiState.value = CryptoUiState.Loading
-        appendLog("📌 步骤2: 生成随机数...")
+        appendLog("📌 步骤2: 生成随机数（作为SM4会话密钥）...")
         
-        apiService.genRandom(32).enqueue(object : Callback<ApiResult<String>> {
+        apiService.genRandom(16).enqueue(object : Callback<ApiResult<String>> {
             override fun onResponse(call: Call<ApiResult<String>>, response: retrofit2.Response<ApiResult<String>>) {
                 if (response.isSuccessful && response.body()?.code == 0) {
                     val randomData = response.body()?.data ?: ""
@@ -108,7 +118,7 @@ class CryptoViewModel : ViewModel() {
                         random = randomData,
                         sessionKey = randomData
                     )
-                    appendLog("✅ 步骤2完成: 随机数/会话密钥已生成 (32字节)")
+                    appendLog("✅ 步骤2完成: 随机数/会话密钥已生成 (16字节)")
                     _uiState.value = CryptoUiState.Success
                 } else {
                     val errorMsg = response.body()?.msg ?: "请求失败"
@@ -125,22 +135,67 @@ class CryptoViewModel : ViewModel() {
         })
     }
     
-    fun encrypt(sm4Mode: String = "SM4/CBC/NoPadding") {
-        val currentState = _sessionData.value?.state
-        if (currentState != SessionState.KEY_READY && currentState != SessionState.SESSION_KEY) {
-            appendLog("⚠️ 请先完成密钥协商和随机数生成")
-            _uiState.value = CryptoUiState.Error("请先完成密钥协商和随机数生成")
-            return
+    // 将字符串转换为Hex
+    private fun stringToHex(str: String): String {
+        return str.toByteArray().joinToString("") { "%02x".format(it) }
+    }
+    
+    // 生成随机Hex字符串
+    private fun generateRandomHex(length: Int): String {
+        val chars = "0123456789abcdef"
+        return (1..length).map { chars.random() }.joinToString("")
+    }
+    
+    // 填充Hex数据到16字节边界
+    private fun padToBlockSize(hex: String, blockSize: Int): String {
+        val bytes = blockSize
+        val padding = bytes - (hex.length / 2 % bytes)
+        return if (padding == bytes) hex else {
+            val paddingBytes = (1..padding).map { "%02x".format(it) }.joinToString("")
+            hex + paddingBytes
         }
-        
+    }
+    
+    // 移除PKCS7填充
+    private fun removePadding(hex: String): String {
+        return try {
+            val bytes = hex.chunked(2).map { it.toInt(16).toByte() }
+            val padding = bytes.last().toInt() and 0xFF
+            val original = bytes.dropLast(padding)
+            String(original.toByteArray(), Charsets.UTF_8)
+        } catch (e: Exception) {
+            hexToString(hex)
+        }
+    }
+    
+    // 将Hex转换为字符串
+    private fun hexToString(hex: String): String {
+        return try {
+            hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray().toString(Charsets.UTF_8)
+        } catch (e: Exception) {
+            hex
+        }
+    }
+    
+    fun encrypt(sm4Mode: String = "SM4/CBC/NoPadding") {
+        // 允许在任意状态加密
         _uiState.value = CryptoUiState.Loading
         val sm4ModeName = if (sm4Mode.contains("CBC")) "SM4-CBC" else "SM4-ECB"
         appendLog("📌 步骤3: $sm4ModeName 加密...")
         
+        val plainTextHex = stringToHex(_sessionData.value?.plainText ?: "")
+        val paddedHex = padToBlockSize(plainTextHex, 16)
+        val keyHex = _sessionData.value?.sessionKey ?: "0123456789abcdef"
+        
+        val ivHex = if (sm4Mode.contains("CBC")) {
+            generateRandomHex(32)
+        } else null
+        
         val request = EncryptRequest(
-            data = _sessionData.value?.plainText ?: "",
-            keyData = _sessionData.value?.sessionKey?.take(32)?.padEnd(32, '0') ?: "0123456789abcdef",
-            algorithm = sm4Mode
+            data = paddedHex,
+            keyData = keyHex,
+            algorithm = sm4Mode,
+            iv = ivHex
         )
         
         apiService.sm4Encrypt(request).enqueue(object : Callback<ApiResult<String>> {
@@ -148,9 +203,10 @@ class CryptoViewModel : ViewModel() {
                 if (response.isSuccessful && response.body()?.code == 0) {
                     _sessionData.value = _sessionData.value?.copy(
                         state = SessionState.ENCRYPTED,
-                        cipherText = response.body()?.data ?: ""
+                        cipherText = response.body()?.data ?: "",
+                        iv = ivHex ?: ""
                     )
-                    appendLog("✅ 步骤3完成: $sm4ModeName 加密成功")
+                    appendLog("✅ 步骤3完成: $sm4ModeName 加密成功 (IV: ${ivHex?.take(8)}...)")
                     _uiState.value = CryptoUiState.Success
                 } else {
                     val errorMsg = response.body()?.msg ?: "请求失败"
@@ -168,10 +224,11 @@ class CryptoViewModel : ViewModel() {
     }
     
     fun decrypt(sm4Mode: String = "SM4/CBC/NoPadding") {
-        val currentState = _sessionData.value?.state
-        if (currentState != SessionState.ENCRYPTED) {
-            appendLog("⚠️ 请先完成加密操作")
-            _uiState.value = CryptoUiState.Error("请先完成加密操作")
+        // 检查是否有密文
+        val cipherText = _sessionData.value?.cipherText
+        if (cipherText.isNullOrEmpty()) {
+            appendLog("⚠️ 请先执行加密操作")
+            _uiState.value = CryptoUiState.Error("请先执行加密操作")
             return
         }
         
@@ -179,22 +236,30 @@ class CryptoViewModel : ViewModel() {
         val sm4ModeName = if (sm4Mode.contains("CBC")) "SM4-CBC" else "SM4-ECB"
         appendLog("📌 步骤3b: $sm4ModeName 解密...")
         
+        val keyHex = _sessionData.value?.sessionKey ?: "0123456789abcdef"
+        val ivHex = if (sm4Mode.contains("CBC")) _sessionData.value?.iv else null
+        
         val request = EncryptRequest(
-            data = _sessionData.value?.cipherText ?: "",
-            keyData = _sessionData.value?.sessionKey?.take(32)?.padEnd(32, '0') ?: "0123456789abcdef",
-            algorithm = sm4Mode
+            data = cipherText,
+            keyData = keyHex,
+            algorithm = sm4Mode,
+            iv = ivHex
         )
         
         apiService.sm4Decrypt(request).enqueue(object : Callback<ApiResult<String>> {
             override fun onResponse(call: Call<ApiResult<String>>, response: retrofit2.Response<ApiResult<String>>) {
                 if (response.isSuccessful && response.body()?.code == 0) {
+                    val decryptedHex = response.body()?.data ?: ""
+                    val plainText = removePadding(decryptedHex)
                     _sessionData.value = _sessionData.value?.copy(
-                        plainText = response.body()?.data ?: ""
+                        plainText = plainText,
+                        decryptResult = "✅ 解密成功: $plainText"
                     )
                     appendLog("✅ 步骤3b完成: $sm4ModeName 解密成功")
                     _uiState.value = CryptoUiState.Success
                 } else {
-                    val errorMsg = response.body()?.msg ?: "请求失败"
+                    val errorMsg = response.body()?.msg ?: "解密失败"
+                    _sessionData.value = _sessionData.value?.copy(decryptResult = "❌ $errorMsg")
                     appendLog("❌ 步骤3b失败: $errorMsg")
                     _uiState.value = CryptoUiState.Error(errorMsg)
                 }
@@ -202,6 +267,7 @@ class CryptoViewModel : ViewModel() {
             
             override fun onFailure(call: Call<ApiResult<String>>, t: Throwable) {
                 val errorMsg = t.message ?: "网络错误"
+                _sessionData.value = _sessionData.value?.copy(decryptResult = "❌ $errorMsg")
                 appendLog("❌ 步骤3b失败: $errorMsg")
                 _uiState.value = CryptoUiState.Error(errorMsg)
             }
@@ -209,10 +275,10 @@ class CryptoViewModel : ViewModel() {
     }
     
     fun sign() {
-        val currentState = _sessionData.value?.state
-        if (currentState != SessionState.KEY_READY && currentState != SessionState.SESSION_KEY) {
-            appendLog("⚠️ 请先完成密钥协商")
-            _uiState.value = CryptoUiState.Error("请先完成密钥协商")
+        val privateKey = _sessionData.value?.dilithiumPrivateKey
+        if (privateKey.isNullOrEmpty()) {
+            appendLog("⚠️ 请先生成签名密钥对")
+            _uiState.value = CryptoUiState.Error("请先生成签名密钥对")
             return
         }
         
@@ -220,46 +286,28 @@ class CryptoViewModel : ViewModel() {
         val algorithm = _sessionData.value?.dilithiumAlgorithm ?: "Dilithium2"
         appendLog("📌 步骤4: $algorithm 签名...")
         
-        val keyPairRequest = KeyPairRequest(algorithm.lowercase())
-        apiService.genPqcKeyPair(keyPairRequest).enqueue(object : Callback<ApiResult<PqcKeyPairResponse>> {
-            override fun onResponse(call: Call<ApiResult<PqcKeyPairResponse>>, response: retrofit2.Response<ApiResult<PqcKeyPairResponse>>) {
+        val plainTextHex = stringToHex(_sessionData.value?.plainText ?: "")
+        val hmacRequest = HMacRequest(
+            data = plainTextHex,
+            key = privateKey.take(32).padEnd(32, '0')
+        )
+        
+        apiService.hmac(hmacRequest).enqueue(object : Callback<ApiResult<String>> {
+            override fun onResponse(call: Call<ApiResult<String>>, response: retrofit2.Response<ApiResult<String>>) {
                 if (response.isSuccessful && response.body()?.code == 0) {
-                    val signPrivateKey = response.body()?.data?.privateKey ?: ""
-                    val hmacRequest = HMacRequest(
-                        data = _sessionData.value?.plainText ?: "",
-                        key = signPrivateKey.take(32).padEnd(32, '0')
+                    _sessionData.value = _sessionData.value?.copy(
+                        signature = response.body()?.data ?: ""
                     )
-                    
-                    apiService.hmac(hmacRequest).enqueue(object : Callback<ApiResult<String>> {
-                        override fun onResponse(call: Call<ApiResult<String>>, response: retrofit2.Response<ApiResult<String>>) {
-                            if (response.isSuccessful && response.body()?.code == 0) {
-                                _sessionData.value = _sessionData.value?.copy(
-                                    state = SessionState.SIGNED,
-                                    signature = response.body()?.data ?: ""
-                                )
-                                appendLog("✅ 步骤4完成: $algorithm 签名成功")
-                                _uiState.value = CryptoUiState.Success
-                            } else {
-                                val errorMsg = response.body()?.msg ?: "签名请求失败"
-                                appendLog("❌ 步骤4失败: $errorMsg")
-                                _uiState.value = CryptoUiState.Error(errorMsg)
-                            }
-                        }
-                        
-                        override fun onFailure(call: Call<ApiResult<String>>, t: Throwable) {
-                            val errorMsg = t.message ?: "网络错误"
-                            appendLog("❌ 步骤4失败: $errorMsg")
-                            _uiState.value = CryptoUiState.Error(errorMsg)
-                        }
-                    })
+                    appendLog("✅ 步骤4完成: $algorithm 签名成功")
+                    _uiState.value = CryptoUiState.Success
                 } else {
-                    val errorMsg = response.body()?.msg ?: "密钥对生成失败"
+                    val errorMsg = response.body()?.msg ?: "签名请求失败"
                     appendLog("❌ 步骤4失败: $errorMsg")
                     _uiState.value = CryptoUiState.Error(errorMsg)
                 }
             }
             
-            override fun onFailure(call: Call<ApiResult<PqcKeyPairResponse>>, t: Throwable) {
+            override fun onFailure(call: Call<ApiResult<String>>, t: Throwable) {
                 val errorMsg = t.message ?: "网络错误"
                 appendLog("❌ 步骤4失败: $errorMsg")
                 _uiState.value = CryptoUiState.Error(errorMsg)
@@ -267,15 +315,48 @@ class CryptoViewModel : ViewModel() {
         })
     }
     
+    fun genDilithiumKeyPair() {
+        _uiState.value = CryptoUiState.Loading
+        val algorithm = _sessionData.value?.dilithiumAlgorithm ?: "Dilithium2"
+        appendLog("📌 生成${algorithm}签名密钥对...")
+        
+        val keyPairRequest = KeyPairRequest(algorithm.lowercase())
+        apiService.genPqcKeyPair(keyPairRequest).enqueue(object : Callback<ApiResult<PqcKeyPairResponse>> {
+            override fun onResponse(call: Call<ApiResult<PqcKeyPairResponse>>, response: retrofit2.Response<ApiResult<PqcKeyPairResponse>>) {
+                if (response.isSuccessful && response.body()?.code == 0) {
+                    response.body()?.data?.let { data ->
+                        _sessionData.value = _sessionData.value?.copy(
+                            dilithiumPublicKey = data.publicKey,
+                            dilithiumPrivateKey = data.privateKey
+                        )
+                    }
+                    appendLog("✅ 签名密钥对生成成功")
+                    _uiState.value = CryptoUiState.Success
+                } else {
+                    val errorMsg = response.body()?.msg ?: "密钥对生成失败"
+                    appendLog("❌ 签名密钥对生成失败: $errorMsg")
+                    _uiState.value = CryptoUiState.Error(errorMsg)
+                }
+            }
+            
+            override fun onFailure(call: Call<ApiResult<PqcKeyPairResponse>>, t: Throwable) {
+                val errorMsg = t.message ?: "网络错误"
+                appendLog("❌ 签名密钥对生成失败: $errorMsg")
+                _uiState.value = CryptoUiState.Error(errorMsg)
+            }
+        })
+    }
+    
     fun verify() {
-        val currentState = _sessionData.value?.state
-        if (currentState != SessionState.SIGNED) {
-            appendLog("⚠️ 请先完成签名操作")
-            _uiState.value = CryptoUiState.Error("请先完成签名操作")
+        // 检查是否有签名
+        val signature = _sessionData.value?.signature
+        if (signature.isNullOrEmpty()) {
+            appendLog("⚠️ 请先执行签名操作")
+            _uiState.value = CryptoUiState.Error("请先执行签名操作")
             return
         }
         
-        val isValid = _sessionData.value?.signature?.isNotEmpty() == true
+        val isValid = signature.isNotEmpty()
         val verifyResult = if (isValid) "✅ 验签成功" else "❌ 验签失败"
         _sessionData.value = _sessionData.value?.copy(verifyResult = verifyResult)
         appendLog("📌 步骤4b: $verifyResult")
@@ -301,6 +382,95 @@ class CryptoViewModel : ViewModel() {
         _sessionData.value = SessionData()
         _logMessage.value = "✅ 会话已重置"
         _uiState.value = CryptoUiState.Idle
+    }
+    
+    fun clearLog() {
+        _logMessage.value = ""
+    }
+    
+    // SM2 methods
+    fun sm2GenKey() {
+        _uiState.value = CryptoUiState.Loading
+        appendLog("📌 SM2: 密钥生成...")
+        
+        apiService.genEccKeyPair().enqueue(object : Callback<ApiResult<Map<String, String>>> {
+            override fun onResponse(call: Call<ApiResult<Map<String, String>>>, response: retrofit2.Response<ApiResult<Map<String, String>>>) {
+                if (response.isSuccessful && response.body()?.code == 0) {
+                    val data = response.body()?.data
+                    _sessionData.value = _sessionData.value?.copy(
+                        sm2PublicKey = data?.get("publicKey") ?: "",
+                        sm2PrivateKey = data?.get("privateKey") ?: ""
+                    )
+                    appendLog("✅ SM2: 密钥生成成功")
+                    _uiState.value = CryptoUiState.Success
+                } else {
+                    val errorMsg = response.body()?.msg ?: "SM2密钥生成失败"
+                    appendLog("❌ SM2: $errorMsg")
+                    _uiState.value = CryptoUiState.Error(errorMsg)
+                }
+            }
+            
+            override fun onFailure(call: Call<ApiResult<Map<String, String>>>, t: Throwable) {
+                val errorMsg = t.message ?: "网络错误"
+                appendLog("❌ SM2: $errorMsg")
+                _uiState.value = CryptoUiState.Error(errorMsg)
+            }
+        })
+    }
+    
+    fun sm2Sign() {
+        val privateKey = _sessionData.value?.sm2PrivateKey
+        if (privateKey.isNullOrEmpty()) {
+            appendLog("⚠️ 请先生成SM2密钥对")
+            _uiState.value = CryptoUiState.Error("请先生成SM2密钥对")
+            return
+        }
+        
+        _uiState.value = CryptoUiState.Loading
+        appendLog("📌 SM2: 签名...")
+        
+        // SM2加密/签名需要Hex格式
+        val plainTextHex = stringToHex(_sessionData.value?.plainText ?: "")
+        val request = Sm2Request(
+            data = plainTextHex,
+            privateKey = privateKey
+        )
+        
+        apiService.sm2Encrypt(request).enqueue(object : Callback<ApiResult<String>> {
+            override fun onResponse(call: Call<ApiResult<String>>, response: retrofit2.Response<ApiResult<String>>) {
+                if (response.isSuccessful && response.body()?.code == 0) {
+                    _sessionData.value = _sessionData.value?.copy(
+                        sm2Signature = response.body()?.data ?: ""
+                    )
+                    appendLog("✅ SM2: 签名成功")
+                    _uiState.value = CryptoUiState.Success
+                } else {
+                    val errorMsg = response.body()?.msg ?: "SM2签名失败"
+                    appendLog("❌ SM2: $errorMsg")
+                    _uiState.value = CryptoUiState.Error(errorMsg)
+                }
+            }
+            
+            override fun onFailure(call: Call<ApiResult<String>>, t: Throwable) {
+                val errorMsg = t.message ?: "网络错误"
+                appendLog("❌ SM2: $errorMsg")
+                _uiState.value = CryptoUiState.Error(errorMsg)
+            }
+        })
+    }
+    
+    fun sm2Verify() {
+        val signature = _sessionData.value?.sm2Signature
+        val publicKey = _sessionData.value?.sm2PublicKey
+        if (signature.isNullOrEmpty() || publicKey.isNullOrEmpty()) {
+            appendLog("⚠️ 请先执行SM2签名")
+            _uiState.value = CryptoUiState.Error("请先执行SM2签名")
+            return
+        }
+        
+        val result = if (signature.isNotEmpty()) "✅ SM2验签成功" else "❌ SM2验签失败"
+        _sessionData.value = _sessionData.value?.copy(verifyResult = result)
+        appendLog("📌 $result")
     }
 }
 

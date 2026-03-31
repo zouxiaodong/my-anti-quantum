@@ -41,29 +41,47 @@
                 android:id="@+id/btnNewSession"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="新建会话 🔄"
-                android:layout_marginEnd="8dp"/>
+                android:text="新建会话 🔄"/>
+        </LinearLayout>
+
+        <!-- 协商算法单独一行 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="协商算法: "
-                android:layout_marginEnd="4dp"/>
+                android:layout_marginEnd="8dp"/>
 
             <Spinner
                 android:id="@+id/spinnerKyber"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="48dp"
                 android:layout_weight="1"
-                android:entries="@array/kyber_algorithms"/>
+                android:background="@android:drawable/btn_dropdown"
+                android:entries="@array/kyber_algorithms"
+                android:spinnerMode="dropdown"/>
+        </LinearLayout>
+
+        <!-- 状态显示 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical">
 
             <TextView
                 android:id="@+id/tvSessionStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="🔴 未初始化"
-                android:textColor="@color/red"
-                android:layout_marginStart="8dp"/>
+                android:textColor="@color/red"/>
         </LinearLayout>
 
         <!-- ==================== 第一步: 密钥协商 ==================== -->
@@ -273,6 +291,16 @@
                 android:minLines="2"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- 解密结果单独显示 -->
+        <TextView
+            android:id="@+id/tvDecryptResult"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="@color/green"
+            android:textStyle="bold"
+            android:layout_marginTop="4dp"/>
+
         <!-- ==================== 第四步: 签名验签 ==================== -->
         <TextView
             android:layout_width="match_parent"
@@ -292,14 +320,17 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="签名算法: "/>
+                android:text="签名算法: "
+                android:layout_marginEnd="8dp"/>
 
             <Spinner
                 android:id="@+id/spinnerDilithium"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="48dp"
                 android:layout_weight="1"
-                android:entries="@array/dilithium_algorithms"/>
+                android:background="@android:drawable/btn_dropdown"
+                android:entries="@array/dilithium_algorithms"
+                android:spinnerMode="dropdown"/>
         </LinearLayout>
 
         <LinearLayout
@@ -307,6 +338,14 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_marginTop="8dp">
+
+            <Button
+                android:id="@+id/btnGenDilithiumKey"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="生成密钥"
+                android:layout_marginEnd="4dp"/>
 
             <Button
                 android:id="@+id/btnSign"
@@ -341,6 +380,19 @@
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:hint="签名公钥"
+            android:layout_marginTop="8dp">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etDilithiumPublicKey"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textMultiLine"
+                android:minLines="2"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:hint="验签结果"
             android:layout_marginTop="8dp">
             <com.google.android.material.textfield.TextInputEditText
@@ -348,6 +400,84 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="text"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- ==================== SM2 国密算法 ==================== -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📌 SM2 国密算法"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:layout_marginTop="16dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <Button
+                android:id="@+id/btnSm2GenKey"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="生成密钥"
+                android:layout_marginEnd="4dp"/>
+
+            <Button
+                android:id="@+id/btnSm2Sign"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="SM2签名"
+                android:layout_marginEnd="4dp"/>
+
+            <Button
+                android:id="@+id/btnSm2Verify"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="SM2验签"/>
+        </LinearLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="SM2公钥"
+            android:layout_marginTop="8dp">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etSm2PublicKey"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textMultiLine"
+                android:minLines="2"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="SM2私钥"
+            android:layout_marginTop="8dp">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etSm2PrivateKey"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textMultiLine"
+                android:minLines="2"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="SM2签名结果"
+            android:layout_marginTop="8dp">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etSm2Signature"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textMultiLine"
+                android:minLines="2"/>
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- ==================== 完整流程测试 ==================== -->
@@ -388,13 +518,29 @@
             android:backgroundTint="@color/purple_500"/>
 
         <!-- ==================== 日志输出 ==================== -->
-        <TextView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📌 日志"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            android:layout_marginTop="16dp"/>
+            android:orientation="horizontal"
+            android:layout_marginTop="16dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="📌 日志"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:layout_weight="1"/>
+
+            <Button
+                android:id="@+id/btnClearLog"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="清空"
+                android:minHeight="0dp"
+                android:minWidth="0dp"
+                android:padding="4dp"/>
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tvLog"
