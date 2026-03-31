@@ -93,7 +93,10 @@ public class EncryptorController {
     @PostMapping("/sm2Enc")
     public ResponseEntity<Result<String>> sm2Enc(@Valid @RequestBody Sm2Request request) {
         try {
-            String encrypted = sm2Service.encrypt(request.getData(), request.getPrivateKey());
+            if (request.getPublicKey() == null || request.getPublicKey().isEmpty()) {
+                return ResponseEntity.ok(Result.error(1, "SM2加密需要公钥"));
+            }
+            String encrypted = sm2Service.encrypt(request.getData(), request.getPublicKey());
             return ResponseEntity.ok(Result.success(encrypted));
         } catch (Exception e) {
             return ResponseEntity.ok(Result.error(1, "SM2加密失败: " + e.getMessage()));
@@ -103,6 +106,9 @@ public class EncryptorController {
     @PostMapping("/sm2Dec")
     public ResponseEntity<Result<String>> sm2Dec(@Valid @RequestBody Sm2Request request) {
         try {
+            if (request.getPrivateKey() == null || request.getPrivateKey().isEmpty()) {
+                return ResponseEntity.ok(Result.error(1, "SM2解密需要私钥"));
+            }
             String decrypted = sm2Service.decrypt(request.getData(), request.getPrivateKey());
             return ResponseEntity.ok(Result.success(decrypted));
         } catch (Exception e) {

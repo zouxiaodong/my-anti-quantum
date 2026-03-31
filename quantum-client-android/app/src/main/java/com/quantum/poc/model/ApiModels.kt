@@ -27,7 +27,8 @@ data class HMacRequest(
 
 data class Sm2Request(
     @SerializedName("data") val data: String,
-    @SerializedName("privateKey") val privateKey: String
+    @SerializedName("privateKey") val privateKey: String? = null,
+    @SerializedName("publicKey") val publicKey: String? = null
 )
 
 data class KeyPairRequest(

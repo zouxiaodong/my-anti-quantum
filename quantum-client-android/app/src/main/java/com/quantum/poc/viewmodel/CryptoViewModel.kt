@@ -364,8 +364,28 @@ class CryptoViewModel : ViewModel() {
     
     fun fullFlow() {
         appendLog("🚀 开始执行完整流程...")
-        appendLog("组合: ${_sessionData.value?.kyberAlgorithm} + SM4-CBC + ${_sessionData.value?.dilithiumAlgorithm}")
+        appendLog("组合: ${_sessionData.value?.kyberAlgorithm} + SM4-CBC + ${_sessionData.value?.dilithiumAlgorithm} + SM2")
+        
+        // Step 1: Generate PQC key pair (Kyber)
         genKeyPair()
+        
+        // Step 2: Generate random for SM4 session key
+        genRandom()
+        
+        // Step 3: Generate SM2 key pair
+        sm2GenKey()
+        
+        // Step 4: SM2 encryption
+        sm2Sign()
+        
+        // Step 5: SM4 encryption
+        encrypt()
+        
+        // Step 6: SM4 decryption  
+        decrypt()
+        
+        // Step 7: Dilithium signature
+        sign()
     }
     
     fun setPlainText(text: String) {
@@ -419,8 +439,8 @@ class CryptoViewModel : ViewModel() {
     }
     
     fun sm2Sign() {
-        val privateKey = _sessionData.value?.sm2PrivateKey
-        if (privateKey.isNullOrEmpty()) {
+        val publicKey = _sessionData.value?.sm2PublicKey
+        if (publicKey.isNullOrEmpty()) {
             appendLog("⚠️ 请先生成SM2密钥对")
             _uiState.value = CryptoUiState.Error("请先生成SM2密钥对")
             return
@@ -429,11 +449,11 @@ class CryptoViewModel : ViewModel() {
         _uiState.value = CryptoUiState.Loading
         appendLog("📌 SM2: 签名...")
         
-        // SM2加密/签名需要Hex格式
+        // SM2加密需要Hex格式和公钥
         val plainTextHex = stringToHex(_sessionData.value?.plainText ?: "")
         val request = Sm2Request(
             data = plainTextHex,
-            privateKey = privateKey
+            publicKey = publicKey
         )
         
         apiService.sm2Encrypt(request).enqueue(object : Callback<ApiResult<String>> {
