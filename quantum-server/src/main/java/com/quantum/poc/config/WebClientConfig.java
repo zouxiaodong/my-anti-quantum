@@ -32,11 +32,10 @@ public class WebClientConfig {
     private ExchangeFilterFunction loggingFilter() {
         return (clientRequest, next) -> {
             log.info("[请求] {} {}", clientRequest.method(), clientRequest.url());
-            return next.exchange(clientRequest)
-                .doOnNext(clientResponse -> {
-                    HttpStatus status = (HttpStatus) clientResponse.statusCode();
-                    log.info("[响应] HTTP {} - {}", status.value(), status.getReasonPhrase());
-                });
+            return next.exchange(clientRequest).doOnNext(clientResponse -> {
+                HttpStatus status = (HttpStatus) clientResponse.statusCode();
+                log.info("[响应] HTTP {} - {}", status.value(), status.getReasonPhrase());
+            });
         };
     }
 }

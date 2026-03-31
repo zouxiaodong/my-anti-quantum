@@ -1,5 +1,6 @@
 package com.quantum.poc.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quantum.poc.config.EncryptorConfig;
 import com.quantum.poc.dto.*;
 import org.slf4j.Logger;
@@ -16,6 +17,7 @@ import java.util.function.Consumer;
 public class CryptoGatewayService {
 
     private static final Logger log = LoggerFactory.getLogger(CryptoGatewayService.class);
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final WebClient encryptorWebClient;
     private final EncryptorConfig encryptorConfig;
@@ -27,7 +29,7 @@ public class CryptoGatewayService {
     }
 
     public Mono<Result<String>> genRandom(Integer length) {
-        log.info("[REQUEST] genRandom, length={}", length);
+        logRequest("genRandom", Map.of("length", length));
         return doRequest(
                 "/scyh-server/v101/genRandom?length=" + length,
                 new ParameterizedTypeReference<Result<String>>() {},
@@ -37,7 +39,7 @@ public class CryptoGatewayService {
     }
 
     public Mono<Result<String>> sm4Encrypt(EncryptRequest request) {
-        log.info("[REQUEST] sm4Encrypt, algorithm={}", request.getAlgorithm());
+        logRequest("sm4Encrypt", request);
         return doRequest(
                 "/scyh-server/v101/symAlgEnc",
                 request,
@@ -48,7 +50,7 @@ public class CryptoGatewayService {
     }
 
     public Mono<Result<String>> sm4Decrypt(EncryptRequest request) {
-        log.info("[REQUEST] sm4Decrypt, algorithm={}", request.getAlgorithm());
+        logRequest("sm4Decrypt", request);
         return doRequest(
                 "/scyh-server/v101/symAlgDec",
                 request,
@@ -59,7 +61,7 @@ public class CryptoGatewayService {
     }
 
     public Mono<Result<String>> hash(HashRequest request) {
-        log.info("[REQUEST] hash, algorithm={}", request.getAlgorithm());
+        logRequest("hash", request);
         return doRequest(
                 "/scyh-server/v101/hash",
                 request,
@@ -70,7 +72,7 @@ public class CryptoGatewayService {
     }
 
     public Mono<Result<String>> hmac(HMacRequest request) {
-        log.info("[REQUEST] hmac");
+        logRequest("hmac", request);
         return doRequest(
                 "/scyh-server/v101/hmac",
                 request,
@@ -81,7 +83,7 @@ public class CryptoGatewayService {
     }
 
     public Mono<Result<Map>> genEccKeyPair() {
-        log.info("[REQUEST] genEccKeyPair");
+        logRequest("genEccKeyPair", Map.of());
         return doRequest(
                 "/scyh-server/v101/genEccKeyPair",
                 new ParameterizedTypeReference<Result<Map>>() {},
@@ -91,7 +93,7 @@ public class CryptoGatewayService {
     }
 
     public Mono<Result<String>> sm2Encrypt(Sm2Request request) {
-        log.info("[REQUEST] sm2Encrypt");
+        logRequest("sm2Encrypt", request);
         return doRequest(
                 "/scyh-server/v101/sm2Enc",
                 request,
@@ -102,7 +104,7 @@ public class CryptoGatewayService {
     }
 
     public Mono<Result<String>> sm2Decrypt(Sm2Request request) {
-        log.info("[REQUEST] sm2Decrypt");
+        logRequest("sm2Decrypt", request);
         return doRequest(
                 "/scyh-server/v101/sm2Dec",
                 request,
@@ -113,7 +115,7 @@ public class CryptoGatewayService {
     }
 
     public Mono<Result<Map>> genPqcKeyPair(KeyPairRequest request) {
-        log.info("[REQUEST] genPqcKeyPair, algorithm={}", request.getAlgorithm());
+        logRequest("genPqcKeyPair", Map.of("algorithm", request.getAlgorithm()));
         return doRequest(
                 "/scyh-server/v101/genPqcKeyPair",
                 java.util.Map.of("algorithm", request.getAlgorithm()),
@@ -124,7 +126,7 @@ public class CryptoGatewayService {
     }
 
     public Mono<Result<PqcKeyWrapperResponse>> pqcKeyWrapper(PqcKeyWrapperRequest request) {
-        log.info("[REQUEST] pqcKeyWrapper, algorithm={}", request.getAlgorithm());
+        logRequest("pqcKeyWrapper", request);
         return doRequest(
                 "/scyh-server/v101/pqcKeyWrapper",
                 request,
@@ -137,7 +139,7 @@ public class CryptoGatewayService {
     }
 
     public Mono<Result<String>> pqcKeyUnwrapper(PqcKeyUnwrapperRequest request) {
-        log.info("[REQUEST] pqcKeyUnwrapper, algorithm={}", request.getAlgorithm());
+        logRequest("pqcKeyUnwrapper", request);
         return doRequest(
                 "/scyh-server/v101/pqcKeyUnWrapper",
                 request,
@@ -147,13 +149,37 @@ public class CryptoGatewayService {
         );
     }
 
+    private void logRequest(String operation, Object request) {
+        try {
+            String bodyStr = objectMapper.writeValueAsString(request);
+            log.info("[REQUEST] {} body={}", operation, bodyStr);
+        } catch (Exception e) {
+            log.info("[REQUEST] {} body={}", operation, request);
+        }
+    }
+
     private <T, R> Mono<R> doRequest(String uri, Object body, ParameterizedTypeReference<R> typeRef,
                                        String operationName, Consumer<R> successHandler) {
         return encryptorWebClient.post()
                 .uri(uri)
                 .bodyValue(body != null ? body : "")
                 .retrieve()
-                .bodyToMono(typeRef)
+                .bodyToMono(String.class)
+                .flatMap(rawResponse -> {
+                    log.info("[RESPONSE] {} body={}", operationName, 
+                            rawResponse.length() > 500 ? rawResponse.substring(0, 500) + "..." : rawResponse);
+                    try {
+                        @SuppressWarnings("unchecked")
+                        R result = (R) objectMapper.readValue(rawResponse, Result.class);
+                        if (successHandler != null) {
+                            successHandler.accept(result);
+                        }
+                        return Mono.just(result);
+                    } catch (Exception e) {
+                        log.error("[PARSE ERROR] {}", e.getMessage());
+                        return Mono.error(e);
+                    }
+                })
                 .doOnError(error -> log.error("[ERROR] {} failed: {}, type={}",
                         operationName, error.getMessage(), error.getClass().getSimpleName()));
     }
