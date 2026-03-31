@@ -5,9 +5,11 @@ import com.quantum.poc.model.CryptoSession;
 import com.quantum.poc.service.CryptoGatewayService;
 import com.quantum.poc.service.SessionService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
@@ -16,9 +18,11 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/crypto/session")
 @CrossOrigin(origins = "*")
+@Validated
 public class SessionController {
     
     private static final Logger log = LoggerFactory.getLogger(SessionController.class);
+    private static final String SESSION_HEADER = "X-Session-Id";
     
     private final SessionService sessionService;
     private final CryptoGatewayService cryptoGatewayService;
@@ -68,8 +72,8 @@ public class SessionController {
                 });
     }
     
-    @GetMapping("/{sessionId}")
-    public ResponseEntity<Result<SessionInitResponse>> getSession(@PathVariable String sessionId) {
+    @GetMapping
+    public ResponseEntity<Result<SessionInitResponse>> getSession(@RequestHeader(SESSION_HEADER) @NotBlank String sessionId) {
         log.info("查询会话: {}", sessionId);
         
         return sessionService.getSession(sessionId)
@@ -84,8 +88,8 @@ public class SessionController {
                 .orElse(ResponseEntity.ok(Result.error(1, "会话不存在或已过期")));
     }
     
-    @DeleteMapping("/{sessionId}")
-    public ResponseEntity<Result<String>> deleteSession(@PathVariable String sessionId) {
+    @DeleteMapping
+    public ResponseEntity<Result<String>> deleteSession(@RequestHeader(SESSION_HEADER) @NotBlank String sessionId) {
         log.info("删除会话: {}", sessionId);
         
         if (sessionService.isValidSession(sessionId)) {
@@ -95,8 +99,8 @@ public class SessionController {
         return ResponseEntity.ok(Result.error(1, "会话不存在"));
     }
     
-    @PostMapping("/{sessionId}/wrapKey")
-    public Mono<ResponseEntity<Result<Map<String, String>>>> wrapKey(@PathVariable String sessionId) {
+    @PostMapping("/wrapKey")
+    public Mono<ResponseEntity<Result<Map<String, String>>>> wrapKey(@RequestHeader(SESSION_HEADER) @NotBlank String sessionId) {
         log.info("========== 密钥包装 ==========");
         log.info("SessionID: {}", sessionId);
         
@@ -145,8 +149,8 @@ public class SessionController {
                 });
     }
     
-    @PostMapping("/{sessionId}/genKeys")
-    public Mono<ResponseEntity<Result<Map<String, String>>>> generateKeys(@PathVariable String sessionId) {
+    @PostMapping("/genKeys")
+    public Mono<ResponseEntity<Result<Map<String, String>>>> generateKeys(@RequestHeader(SESSION_HEADER) @NotBlank String sessionId) {
         log.info("========== 生成SM2和Dilithium密钥对 ==========");
         log.info("SessionID: {}", sessionId);
         
@@ -197,9 +201,9 @@ public class SessionController {
                 });
     }
     
-    @PostMapping("/{sessionId}/encrypt")
+    @PostMapping("/encrypt")
     public Mono<ResponseEntity<Result<SessionEncryptResponse>>> encrypt(
-            @PathVariable String sessionId,
+            @RequestHeader(SESSION_HEADER) @NotBlank String sessionId,
             @Valid @RequestBody SessionEncryptRequest request) {
         log.info("========== 会话加密 ==========");
         log.info("SessionID: {}", sessionId);
@@ -247,9 +251,9 @@ public class SessionController {
                 });
     }
     
-    @PostMapping("/{sessionId}/decrypt")
+    @PostMapping("/decrypt")
     public Mono<ResponseEntity<Result<SessionDecryptResponse>>> decrypt(
-            @PathVariable String sessionId,
+            @RequestHeader(SESSION_HEADER) @NotBlank String sessionId,
             @Valid @RequestBody SessionDecryptRequest request) {
         log.info("========== 会话解密+验签 ==========");
         log.info("SessionID: {}", sessionId);
@@ -266,7 +270,6 @@ public class SessionController {
                         return Mono.just(ResponseEntity.ok(Result.<SessionDecryptResponse>error(1, "会话密钥未生成")));
                     }
                     
-                    // SM2验签
                     Sm2VerifyRequest verifyRequest = new Sm2VerifyRequest();
                     verifyRequest.setData(request.getCipherText());
                     verifyRequest.setSignature(request.getSignature());
@@ -275,7 +278,7 @@ public class SessionController {
                     
                     return cryptoGatewayService.sm2Verify(verifyRequest)
                             .flatMap(verifyResult -> {
-                                log.info("SM2验签结果: {}", verifyResult.getCode() == 0 ? "✅ 成功" : "❌ 失败");
+                                log.info("SM2验签结果: {}", verifyResult.getCode() == 0 ? "成功" : "失败");
                                 
                                 if (verifyResult.getCode() != 0) {
                                     SessionDecryptResponse response = new SessionDecryptResponse();
@@ -284,7 +287,6 @@ public class SessionController {
                                     return Mono.just(ResponseEntity.ok(Result.success(response, "SM2验签失败")));
                                 }
                                 
-                                // SM4解密
                                 EncryptRequest decRequest = new EncryptRequest();
                                 decRequest.setData(request.getCipherText());
                                 decRequest.setKeyData(session.getSm4SessionKey());
