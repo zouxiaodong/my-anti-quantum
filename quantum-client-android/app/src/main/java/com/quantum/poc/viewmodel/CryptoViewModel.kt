@@ -639,12 +639,6 @@ class CryptoViewModel : ViewModel() {
         sessionInit()
     }
     
-    fun reset() {
-        _sessionData.value = SessionData()
-        _logMessage.value = "✅ 会话已重置"
-        _uiState.value = CryptoUiState.Idle
-    }
-    
     // SM2 methods
     fun sm2GenKey() {
         _uiState.value = CryptoUiState.Loading
