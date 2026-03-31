@@ -181,20 +181,31 @@ public class CryptoController {
     
     @PostMapping("/decrypt")
     public Mono<ResponseEntity<Result<HybridDecryptResponse>>> hybridDecrypt(@Valid @RequestBody HybridDecryptRequest request) {
-        log.info("[Controller] 收到 hybridDecrypt 请求, sm4Algorithm={}", request.getSm4Algorithm());
+        log.info("========== 服务端解密验证流程开始 ==========");
+        log.info("[1/3] 收到密文: {}... (长度: {})", 
+                request.getCipherText() != null ? request.getCipherText().substring(0, Math.min(32, request.getCipherText().length())) : "null",
+                request.getCipherText() != null ? request.getCipherText().length() : 0);
+        log.info("[1/3] 收到密钥(SM4): {}...", request.getSm4Key() != null ? request.getSm4Key().substring(0, 8) : "null");
+        log.info("[1/3] 收到签名: {}...", request.getSignature() != null ? request.getSignature().substring(0, 16) : "null");
+        
         HMacRequest hmacRequest = new HMacRequest();
         hmacRequest.setData(request.getCipherText());
         hmacRequest.setKey(request.getSignPublicKey());
         
         return cryptoGatewayService.hmac(hmacRequest)
                 .flatMap(hmacResult -> {
+                    log.info("[2/3] 验签中... 客户端签名: {}", request.getSignature());
+                    log.info("[2/3] 服务端计算签名: {}...", hmacResult.getData() != null ? hmacResult.getData().substring(0, 16) : "null");
+                    
                     boolean verifyResult = hmacResult.getData() != null 
                             && hmacResult.getData().equals(request.getSignature());
                     
+                    log.info("[2/3] 验签结果: {}", verifyResult ? "✅ 成功" : "❌ 失败");
+                    
                     if (!verifyResult) {
+                        log.info("========== 服务端解密验证流程结束(验签失败) ==========");
                         HybridDecryptResponse response = new HybridDecryptResponse();
                         response.setVerifyResult(false);
-                        log.info("[Controller] hybridDecrypt 验签失败");
                         return Mono.just(ResponseEntity.ok(Result.success(response, "验签失败")));
                     }
                     
@@ -205,12 +216,77 @@ public class CryptoController {
                     
                     return cryptoGatewayService.sm4Decrypt(decRequest)
                             .map(decResult -> {
+                                log.info("[3/3] 解密成功!");
+                                log.info("[3/3] 解密后明文: {}", decResult.getData());
+                                log.info("========== 服务端解密验证流程结束 ==========");
+                                
                                 HybridDecryptResponse response = new HybridDecryptResponse();
                                 response.setPlainText(decResult.getData());
                                 response.setVerifyResult(true);
-                                log.info("[Controller] hybridDecrypt 响应成功");
                                 return ResponseEntity.ok(Result.success(response));
                             });
                 });
+    }
+    
+    @PostMapping("/test/verify")
+    public Mono<ResponseEntity<Result<Map<String, String>>>> testVerify(@Valid @RequestBody TestVerifyRequest request) {
+        log.info("==================== POC验证测试端点 ====================");
+        log.info("【步骤1】密钥交换 (Kyber)");
+        log.info("  - 接收加密的会话密钥(KeyCipher): {}...", 
+                request.getKeyCipher() != null ? request.getKeyCipher().substring(0, 16) : "null");
+        log.info("  - KeyID: {}", request.getKeyId());
+        
+        PqcKeyUnwrapperRequest unwrapRequest = new PqcKeyUnwrapperRequest();
+        unwrapRequest.setAlgorithm(request.getAlgorithm());
+        unwrapRequest.setCipherText(request.getKeyCipher());
+        unwrapRequest.setPqcPrikey(request.getPqcPrivateKey());
+        
+        return cryptoGatewayService.pqcKeyUnwrapper(unwrapRequest).flatMap(unwrapResult -> {
+            String sessionKey = unwrapResult.getData();
+            log.info("【步骤1】密钥交换完成 - 解密后会话密钥: {}...", sessionKey.substring(0, 8));
+            
+            log.info("【步骤2】SM4解密");
+            log.info("  - 接收密文: {}...", 
+                    request.getCipherText() != null ? request.getCipherText().substring(0, 16) : "null");
+            log.info("  - 使用会话密钥: {}...", sessionKey.substring(0, 8));
+            
+            EncryptRequest decRequest = new EncryptRequest();
+            decRequest.setData(request.getCipherText());
+            decRequest.setKeyData(sessionKey);
+            decRequest.setAlgorithm(request.getSm4Algorithm() != null ? request.getSm4Algorithm() : "SM4/CBC/NoPadding");
+            decRequest.setIv(request.getIv());
+            
+            return cryptoGatewayService.sm4Decrypt(decRequest)
+                    .flatMap(decResult -> {
+                        String plainText = decResult.getData();
+                        log.info("【步骤2】SM4解密完成");
+                        log.info("  - 解密后明文: {}", plainText);
+                        
+                        log.info("【步骤3】Dilithium验签");
+                        log.info("  - 原始数据(Hex): {}", request.getData());
+                        log.info("  - 接收签名: {}...", 
+                                request.getSignature() != null ? request.getSignature().substring(0, 16) : "null");
+                        
+                        HMacRequest hmacRequest = new HMacRequest();
+                        hmacRequest.setData(request.getCipherText());
+                        hmacRequest.setKey(request.getSignPublicKey());
+                        
+                        return cryptoGatewayService.hmac(hmacRequest)
+                                .map(hmacResult -> {
+                                    boolean verifyResult = hmacResult.getData() != null 
+                                            && hmacResult.getData().equals(request.getSignature());
+                                    
+                                    log.info("【步骤3】Dilithium验签结果: {}", verifyResult ? "✅ 成功" : "❌ 失败");
+                                    log.info("==================== POC验证测试完成 ====================");
+                                    
+                                    Map<String, String> result = Map.of(
+                                            "plainText", plainText,
+                                            "signatureVerify", String.valueOf(verifyResult),
+                                            "sessionKey", sessionKey
+                                    );
+                                    return ResponseEntity.ok(Result.success(result));
+                                });
+                    });
+        });
     }
 }
