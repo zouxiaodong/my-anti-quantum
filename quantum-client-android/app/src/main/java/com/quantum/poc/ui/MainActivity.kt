@@ -123,21 +123,27 @@ class MainActivity : AppCompatActivity() {
             SessionState.IDLE -> {
                 binding.tvSessionStatus.text = "🔴 未初始化"
                 binding.tvSessionStatus.setTextColor(getColor(R.color.red))
-                binding.tvKeyGenStatus.text = "⏳ 待生成"
+                binding.tvKeyGenStatus.text = "⏳ 待获取"
+                binding.tvWrapKeyStatus.text = "⏳ 待包装"
                 binding.tvRandomStatus.text = "⏳ 待生成"
             }
             SessionState.KEY_READY -> {
-                binding.tvSessionStatus.text = "🟡 密钥就绪"
-                binding.tvKeyGenStatus.text = "✅ 已生成"
+                binding.tvSessionStatus.text = "🟡 已获取随机数"
+                binding.tvKeyGenStatus.text = "✅ 已获取"
+                binding.tvWrapKeyStatus.text = "⏳ 待包装"
                 binding.tvRandomStatus.text = "⏳ 待生成"
             }
             SessionState.SESSION_KEY -> {
-                binding.tvSessionStatus.text = "🟢 会话密钥就绪"
-                binding.tvKeyGenStatus.text = "✅ 已生成"
-                binding.tvRandomStatus.text = "✅ 已生成"
+                binding.tvSessionStatus.text = "🟢 密钥包装完成"
+                binding.tvKeyGenStatus.text = "✅ 已获取"
+                binding.tvWrapKeyStatus.text = "✅ 已包装"
+                binding.tvRandomStatus.text = "⏳ 待生成"
             }
             SessionState.ENCRYPTED -> {
                 binding.tvSessionStatus.text = "🟢 数据已加密"
+                binding.tvKeyGenStatus.text = "✅ 已获取"
+                binding.tvWrapKeyStatus.text = "✅ 已包装"
+                binding.tvRandomStatus.text = "✅ 已生成"
             }
             SessionState.SIGNED -> {
                 binding.tvSessionStatus.text = "🟢 已签名"
@@ -148,9 +154,11 @@ class MainActivity : AppCompatActivity() {
     private fun setupButtons() {
         binding.btnNewSession.setOnClickListener { viewModel.newSession() }
         
-        binding.btnGenKeyPair.setOnClickListener { viewModel.sessionWrapKey() }
+        binding.btnGenKeyPair.setOnClickListener { viewModel.sessionGenRandom() }
         
-        binding.btnGenRandom.setOnClickListener { viewModel.sessionGenRandom() }
+        binding.btnWrapKey.setOnClickListener { viewModel.sessionWrapKey() }
+        
+        binding.btnGenRandom.setOnClickListener { viewModel.sessionGenKeys() }
         
         binding.btnEncrypt.setOnClickListener {
             val sm4Mode = if (binding.rbSm4Cbc.isChecked) "SM4/CBC/NoPadding" else "SM4/ECB/NoPadding"

@@ -115,13 +115,43 @@
                 android:id="@+id/btnGenKeyPair"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="生成密钥对"/>
+                android:text="获取随机数"/>
 
             <TextView
                 android:id="@+id/tvKeyGenStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="⏳ 待生成"
+                android:text="⏳ 待获取"
+                android:layout_marginStart="8dp"
+                android:layout_gravity="center_vertical"/>
+        </LinearLayout>
+
+        <!-- ==================== 第二步: 密钥包装 ==================== -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📌 第二步: 密钥包装 (Kyber)"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:layout_marginTop="16dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <Button
+                android:id="@+id/btnWrapKey"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="密钥包装"/>
+
+            <TextView
+                android:id="@+id/tvWrapKeyStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⏳ 待包装"
                 android:layout_marginStart="8dp"
                 android:layout_gravity="center_vertical"/>
         </LinearLayout>
