@@ -68,6 +68,44 @@ public class SessionController {
         return Mono.just(ResponseEntity.ok(Result.success(response)));
     }
     
+    @PostMapping("/genKyberKey")
+    public Mono<ResponseEntity<Result<SessionKyberKeyResponse>>> genKyberKey(
+            @RequestHeader(SESSION_HEADER) @NotBlank String sessionId) {
+        log.info("========== 生成Kyber密钥对 ==========");
+        log.info("SessionID: {}", sessionId);
+        
+        return cryptoGatewayService.genPqcKeyPair(new KeyPairRequest("Kyber512"))
+                .flatMap(result -> {
+                    if (result.getCode() != 0) {
+                        log.error("Kyber密钥生成失败: {}", result.getMsg());
+                        return Mono.just(ResponseEntity.ok(Result.<SessionKyberKeyResponse>error(1, "密钥生成失败")));
+                    }
+                    
+                    Map<String, String> keys = result.getData();
+                    String publicKey = keys.get("publicKey");
+                    String privateKey = keys.get("privateKey");
+                    
+                    return Mono.fromCallable(() -> sessionService.getSession(sessionId))
+                            .flatMap(optSession -> {
+                                if (optSession.isEmpty()) {
+                                    return Mono.just(ResponseEntity.ok(Result.<SessionKyberKeyResponse>error(1, "会话不存在")));
+                                }
+                                CryptoSession session = optSession.get();
+                                session.setKyberPublicKey(publicKey);
+                                session.setKyberPrivateKey(privateKey);
+                                session.setInitialized(true);
+                                sessionService.updateSession(sessionId, session);
+                                
+                                log.info("========== Kyber密钥生成完成 ==========");
+                                log.info("公钥: {}...", publicKey.substring(0, 16));
+                                
+                                SessionKyberKeyResponse response = new SessionKyberKeyResponse();
+                                response.setPublicKey(publicKey);
+                                return Mono.just(ResponseEntity.ok(Result.success(response)));
+                            });
+                });
+    }
+    
     @GetMapping
     public ResponseEntity<Result<SessionInitResponse>> getSession(@RequestHeader(SESSION_HEADER) @NotBlank String sessionId) {
         log.info("查询会话: {}", sessionId);

@@ -54,6 +54,9 @@ interface CryptoApiService {
     @POST("api/crypto/session/init")
     fun sessionInit(@Body request: SessionInitRequest): Call<ApiResult<SessionInitResponse>>
     
+    @POST("api/crypto/session/genKyberKey")
+    fun sessionGenKyberKey(@Header("X-Session-Id") sessionId: String): Call<ApiResult<SessionKyberKeyResponse>>
+    
     @GET("api/crypto/session/genRandom")
     fun sessionGenRandom(@Query("length") length: Int = 32): Call<ApiResult<String>>
     

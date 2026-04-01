@@ -69,7 +69,6 @@ class MainActivity : AppCompatActivity() {
     private fun setupObservers() {
         viewModel.sessionData.observe(this) { session ->
             binding.tvSessionId.text = if (session.sessionId.isNotEmpty()) "SessionID: ${session.sessionId}" else ""
-            
             binding.etPublicKey.setText(session.publicKey)
             binding.etPrivateKey.setText(session.privateKey)
             binding.etRandom.setText(session.random)
@@ -154,11 +153,11 @@ class MainActivity : AppCompatActivity() {
     private fun setupButtons() {
         binding.btnNewSession.setOnClickListener { viewModel.newSession() }
         
-        binding.btnGenKeyPair.setOnClickListener { viewModel.sessionGenRandom() }
+        binding.btnGenKeyPair.setOnClickListener { viewModel.sessionGenKyberKey() }
+        
+        binding.btnGenRandom.setOnClickListener { viewModel.sessionGenRandom() }
         
         binding.btnWrapKey.setOnClickListener { viewModel.sessionWrapKey() }
-        
-        binding.btnGenRandom.setOnClickListener { viewModel.sessionGenKeys() }
         
         binding.btnEncrypt.setOnClickListener {
             val sm4Mode = if (binding.rbSm4Cbc.isChecked) "SM4/CBC/NoPadding" else "SM4/ECB/NoPadding"

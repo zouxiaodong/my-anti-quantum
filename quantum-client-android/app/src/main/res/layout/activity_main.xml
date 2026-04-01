@@ -96,11 +96,11 @@
                 android:textColor="@color/red"/>
         </LinearLayout>
 
-        <!-- ==================== 第一步: 密钥协商 ==================== -->
+        <!-- ==================== 第一步: 生成Kyber密钥对 ==================== -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📌 第一步: 密钥协商 (Kyber)"
+            android:text="📌 第一步: 生成Kyber密钥对"
             android:textStyle="bold"
             android:textSize="16sp"
             android:layout_marginTop="16dp"/>
@@ -115,43 +115,13 @@
                 android:id="@+id/btnGenKeyPair"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="获取随机数"/>
+                android:text="生成密钥对"/>
 
             <TextView
                 android:id="@+id/tvKeyGenStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="⏳ 待获取"
-                android:layout_marginStart="8dp"
-                android:layout_gravity="center_vertical"/>
-        </LinearLayout>
-
-        <!-- ==================== 第二步: 密钥包装 ==================== -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📌 第二步: 密钥包装 (Kyber)"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            android:layout_marginTop="16dp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-
-            <Button
-                android:id="@+id/btnWrapKey"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="密钥包装"/>
-
-            <TextView
-                android:id="@+id/tvWrapKeyStatus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="⏳ 待包装"
+                android:text="⏳ 待生成"
                 android:layout_marginStart="8dp"
                 android:layout_gravity="center_vertical"/>
         </LinearLayout>
@@ -170,25 +140,11 @@
                 android:maxLines="4"/>
         </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="私钥 (Private Key)"
-            android:layout_marginTop="8dp">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etPrivateKey"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textMultiLine"
-                android:minLines="2"
-                android:maxLines="4"/>
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- ==================== 第二步: 会话密钥 ==================== -->
+        <!-- ==================== 第二步: 获取随机数+密钥包装 ==================== -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📌 第二步: 会话密钥 (Random)"
+            android:text="📌 第二步: 获取随机数 + 密钥包装"
             android:textStyle="bold"
             android:textSize="16sp"
             android:layout_marginTop="16dp"/>
@@ -201,24 +157,41 @@
 
             <Button
                 android:id="@+id/btnGenRandom"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="生成随机数"/>
+                android:layout_weight="1"
+                android:text="获取随机数"
+                android:layout_marginEnd="4dp"/>
 
-            <TextView
-                android:layout_width="wrap_content"
+            <Button
+                android:id="@+id/btnWrapKey"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="长度: 32字节"
-                android:layout_gravity="center_vertical"
-                android:layout_marginStart="8dp"/>
+                android:layout_weight="1"
+                android:text="密钥包装"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
 
             <TextView
                 android:id="@+id/tvRandomStatus"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="⏳ 待生成"
-                android:layout_marginStart="8dp"
-                android:layout_gravity="center_vertical"/>
+                android:layout_weight="1"
+                android:text="⏳ 待获取"
+                android:textSize="12sp"/>
+
+            <TextView
+                android:id="@+id/tvWrapKeyStatus"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="⏳ 待包装"
+                android:textSize="12sp"/>
         </LinearLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -228,6 +201,20 @@
             android:layout_marginTop="8dp">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etRandom"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textMultiLine"
+                android:minLines="2"
+                android:maxLines="4"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="KeyCipher (加密后的会话密钥)"
+            android:layout_marginTop="8dp">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etSessionKey"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textMultiLine"

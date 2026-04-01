@@ -130,3 +130,7 @@ data class SessionDecryptResponse(
 data class SessionWrapKeyRequest(
     @SerializedName("sessionKey") val sessionKey: String
 )
+
+data class SessionKyberKeyResponse(
+    @SerializedName("publicKey") val publicKey: String
+)

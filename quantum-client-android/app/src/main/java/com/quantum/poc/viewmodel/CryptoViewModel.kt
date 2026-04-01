@@ -95,6 +95,42 @@ class CryptoViewModel : ViewModel() {
         })
     }
     
+    fun sessionGenKyberKey() {
+        val sessionId = _sessionData.value?.sessionId
+        if (sessionId.isNullOrEmpty()) {
+            appendLog("⚠️ 请先创建会话")
+            _uiState.value = CryptoUiState.Error("请先创建会话")
+            return
+        }
+        
+        _uiState.value = CryptoUiState.Loading
+        appendLog("📌 步骤1: 生成Kyber密钥对...")
+        
+        apiService.sessionGenKyberKey(sessionId).enqueue(object : Callback<ApiResult<SessionKyberKeyResponse>> {
+            override fun onResponse(call: Call<ApiResult<SessionKyberKeyResponse>>, response: retrofit2.Response<ApiResult<SessionKyberKeyResponse>>) {
+                if (response.isSuccessful && response.body()?.code == 0) {
+                    val publicKey = response.body()?.data?.publicKey ?: ""
+                    _sessionData.value = _sessionData.value?.copy(
+                        state = SessionState.KEY_READY,
+                        publicKey = publicKey
+                    )
+                    appendLog("✅ 步骤1完成: Kyber公钥已生成")
+                    _uiState.value = CryptoUiState.Success
+                } else {
+                    val errorMsg = response.body()?.msg ?: "密钥生成失败"
+                    appendLog("❌ 步骤1失败: $errorMsg")
+                    _uiState.value = CryptoUiState.Error(errorMsg)
+                }
+            }
+            
+            override fun onFailure(call: Call<ApiResult<SessionKyberKeyResponse>>, t: Throwable) {
+                val errorMsg = t.message ?: "网络错误"
+                appendLog("❌ 步骤1失败: $errorMsg")
+                _uiState.value = CryptoUiState.Error(errorMsg)
+            }
+        })
+    }
+    
     fun setKyberAlgorithm(algorithm: String) {
         _sessionData.value = _sessionData.value?.copy(kyberAlgorithm = algorithm)
         appendLog("🔄 切换密钥协商算法: $algorithm")
