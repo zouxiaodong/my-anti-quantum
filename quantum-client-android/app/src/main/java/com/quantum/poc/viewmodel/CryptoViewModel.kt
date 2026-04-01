@@ -513,18 +513,26 @@ class CryptoViewModel : ViewModel() {
         }
         
         _uiState.value = CryptoUiState.Loading
-        appendLog("📌 步骤2: 生成SM4会话密钥 (Kyber包装)...")
+        appendLog("📌 步骤2: 密钥包装 (使用随机数)...")
         
-        apiService.sessionWrapKey(sessionId).enqueue(object : Callback<ApiResult<Map<String, String>>> {
+        val random = _sessionData.value?.random
+        if (random.isNullOrEmpty()) {
+            appendLog("⚠️ 请先获取随机数")
+            _uiState.value = CryptoUiState.Error("请先获取随机数")
+            return
+        }
+        
+        val request = SessionWrapKeyRequest(sessionKey = random)
+        
+        apiService.sessionWrapKey(sessionId, request).enqueue(object : Callback<ApiResult<Map<String, String>>> {
             override fun onResponse(call: Call<ApiResult<Map<String, String>>>, response: retrofit2.Response<ApiResult<Map<String, String>>>) {
                 if (response.isSuccessful && response.body()?.code == 0) {
                     val data = response.body()?.data
                     _sessionData.value = _sessionData.value?.copy(
                         state = SessionState.SESSION_KEY,
-                        sessionKey = data?.get("sessionKey") ?: "",
-                        random = data?.get("sessionKey") ?: ""
+                        sessionKey = random
                     )
-                    appendLog("✅ 步骤2完成: 会话密钥已生成")
+                    appendLog("✅ 步骤2完成: 密钥包装成功 (KeyCipher: ${data?.get("keyCipher")?.take(16)}...)")
                     _uiState.value = CryptoUiState.Success
                 } else {
                     val errorMsg = response.body()?.msg ?: "密钥包装失败"

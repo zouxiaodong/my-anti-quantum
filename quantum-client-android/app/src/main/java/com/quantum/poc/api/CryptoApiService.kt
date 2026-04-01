@@ -64,7 +64,10 @@ interface CryptoApiService {
     fun sessionDelete(@Header("X-Session-Id") sessionId: String): Call<ApiResult<String>>
     
     @POST("api/crypto/session/wrapKey")
-    fun sessionWrapKey(@Header("X-Session-Id") sessionId: String): Call<ApiResult<Map<String, String>>>
+    fun sessionWrapKey(
+        @Header("X-Session-Id") sessionId: String,
+        @Body request: SessionWrapKeyRequest
+    ): Call<ApiResult<Map<String, String>>>
     
     @POST("api/crypto/session/genKeys")
     fun sessionGenKeys(@Header("X-Session-Id") sessionId: String): Call<ApiResult<Map<String, String>>>

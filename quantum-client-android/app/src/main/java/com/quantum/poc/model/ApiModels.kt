@@ -126,3 +126,7 @@ data class SessionDecryptResponse(
     @SerializedName("plainText") val plainText: String?,
     @SerializedName("sm2VerifyResult") val sm2VerifyResult: Boolean
 )
+
+data class SessionWrapKeyRequest(
+    @SerializedName("sessionKey") val sessionKey: String
+)

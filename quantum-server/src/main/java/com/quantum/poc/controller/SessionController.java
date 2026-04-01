@@ -96,9 +96,13 @@ public class SessionController {
     }
     
     @PostMapping("/wrapKey")
-    public Mono<ResponseEntity<Result<Map<String, String>>>> wrapKey(@RequestHeader(SESSION_HEADER) @NotBlank String sessionId) {
+    public Mono<ResponseEntity<Result<Map<String, String>>>> wrapKey(
+            @RequestHeader(SESSION_HEADER) @NotBlank String sessionId,
+            @Valid @RequestBody SessionWrapKeyRequest request) {
         log.info("========== 密钥包装 ==========");
         log.info("SessionID: {}", sessionId);
+        
+        String sessionKey = request.getSessionKey();
         
         return Mono.fromCallable(() -> sessionService.getSession(sessionId))
                 .flatMap(optSession -> {
@@ -107,40 +111,35 @@ public class SessionController {
                     }
                     CryptoSession session = optSession.get();
                     
-                    return cryptoGatewayService.genRandom(16)
-                            .flatMap(randomResult -> {
-                                String sessionKey = randomResult.getData();
-                                log.info("生成的SM4会话密钥: {}...", sessionKey.substring(0, 8));
+                    log.info("SM4会话密钥: {}...", sessionKey.substring(0, 8));
+                    
+                    PqcKeyWrapperRequest wrapRequest = new PqcKeyWrapperRequest();
+                    wrapRequest.setAlgorithm(session.getKyberAlgorithm());
+                    wrapRequest.setPqcPubkey(session.getKyberPublicKey());
+                    wrapRequest.setSymmetricKey(sessionKey);
+                    
+                    return cryptoGatewayService.pqcKeyWrapper(wrapRequest)
+                            .map(wrapResult -> {
+                                if (wrapResult.getCode() != 0) {
+                                    log.error("密钥包装失败: {}", wrapResult.getMsg());
+                                    return ResponseEntity.ok(Result.<Map<String, String>>error(1, "密钥包装失败: " + wrapResult.getMsg()));
+                                }
                                 
-                                PqcKeyWrapperRequest wrapRequest = new PqcKeyWrapperRequest();
-                                wrapRequest.setAlgorithm(session.getKyberAlgorithm());
-                                wrapRequest.setPqcPubkey(session.getKyberPublicKey());
-                                wrapRequest.setSymmetricKey(sessionKey);
+                                session.setSm4SessionKey(sessionKey);
+                                session.setKeyCipher(wrapResult.getData().getKeyCipher());
+                                session.setKeyId(wrapResult.getData().getKeyId());
+                                session.setKeyWrapped(true);
+                                sessionService.updateSession(sessionId, session);
                                 
-                                return cryptoGatewayService.pqcKeyWrapper(wrapRequest)
-                                        .map(wrapResult -> {
-                                            if (wrapResult.getCode() != 0) {
-                                                log.error("密钥包装失败: {}", wrapResult.getMsg());
-                                                return ResponseEntity.ok(Result.<Map<String, String>>error(1, "密钥包装失败: " + wrapResult.getMsg()));
-                                            }
-                                            
-                                            session.setSm4SessionKey(sessionKey);
-                                            session.setKeyCipher(wrapResult.getData().getKeyCipher());
-                                            session.setKeyId(wrapResult.getData().getKeyId());
-                                            session.setKeyWrapped(true);
-                                            sessionService.updateSession(sessionId, session);
-                                            
-                                            log.info("========== 密钥包装完成 ==========");
-                                            log.info("KeyCipher: {}...", wrapResult.getData().getKeyCipher().substring(0, 16));
-                                            log.info("KeyID: {}", wrapResult.getData().getKeyId());
-                                            
-                                            Map<String, String> result = Map.of(
-                                                    "sessionKey", sessionKey,
-                                                    "keyCipher", wrapResult.getData().getKeyCipher(),
-                                                    "keyId", wrapResult.getData().getKeyId()
-                                            );
-                                            return ResponseEntity.ok(Result.success(result));
-                                        });
+                                log.info("========== 密钥包装完成 ==========");
+                                log.info("KeyCipher: {}...", wrapResult.getData().getKeyCipher().substring(0, 16));
+                                log.info("KeyID: {}", wrapResult.getData().getKeyId());
+                                
+                                Map<String, String> result = Map.of(
+                                        "keyCipher", wrapResult.getData().getKeyCipher(),
+                                        "keyId", wrapResult.getData().getKeyId()
+                                );
+                                return ResponseEntity.ok(Result.success(result));
                             });
                 });
     }
