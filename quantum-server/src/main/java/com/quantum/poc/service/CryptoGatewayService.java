@@ -1,7 +1,7 @@
 package com.quantum.poc.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.quantum.poc.config.EncryptorConfig;
+import com.quantum.poc.configv.EncryptorConfig;
 import com.quantum.poc.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

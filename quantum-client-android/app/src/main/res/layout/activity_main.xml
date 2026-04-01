@@ -42,6 +42,18 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="新建会话 🔄"/>
+
+            <TextView
+                android:id="@+id/tvSessionId"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text=""
+                android:textSize="12sp"
+                android:textColor="@color/green"
+                android:ellipsize="middle"
+                android:singleLine="true"/>
         </LinearLayout>
 
         <!-- 协商算法单独一行 -->

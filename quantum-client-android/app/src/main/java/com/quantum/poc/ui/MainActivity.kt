@@ -68,6 +68,8 @@ class MainActivity : AppCompatActivity() {
     
     private fun setupObservers() {
         viewModel.sessionData.observe(this) { session ->
+            binding.tvSessionId.text = if (session.sessionId.isNotEmpty()) "SessionID: ${session.sessionId}" else ""
+            
             binding.etPublicKey.setText(session.publicKey)
             binding.etPrivateKey.setText(session.privateKey)
             binding.etRandom.setText(session.random)
@@ -82,8 +84,6 @@ class MainActivity : AppCompatActivity() {
             binding.etSm2PrivateKey.setText(session.sm2PrivateKey)
             binding.etSm2Signature.setText(session.sm2Signature)
             binding.tvSm2VerifyResult.text = session.sm2VerifyResult
-            
-            // 不重置明文，避免覆盖用户输入
             
             updateSessionStatus(session.state)
         }
