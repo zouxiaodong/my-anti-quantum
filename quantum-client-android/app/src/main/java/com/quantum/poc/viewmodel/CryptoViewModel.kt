@@ -60,8 +60,41 @@ class CryptoViewModel : ViewModel() {
     }
     
     fun newSession() {
-        reset()
-        appendLog("🆕 新建会话 - 算法: Kyber512 + SM4-CBC + Dilithium2")
+        _uiState.value = CryptoUiState.Loading
+        appendLog("🆕 新建会话 - 调用服务端...")
+        
+        val request = SessionInitRequest(
+            kyberAlgorithm = _sessionData.value?.kyberAlgorithm,
+            dilithiumAlgorithm = _sessionData.value?.dilithiumAlgorithm
+        )
+        
+        apiService.sessionInit(request).enqueue(object : Callback<ApiResult<SessionInitResponse>> {
+            override fun onResponse(call: Call<ApiResult<SessionInitResponse>>, response: retrofit2.Response<ApiResult<SessionInitResponse>>) {
+                if (response.isSuccessful && response.body()?.code == 0) {
+                    response.body()?.data?.let { data ->
+                        _sessionData.value = _sessionData.value?.copy(
+                            state = SessionState.KEY_READY,
+                            sessionId = data.sessionId,
+                            publicKey = data.kyberPublicKey,
+                            privateKey = data.kyberPrivateKey
+                        )
+                    }
+                    appendLog("✅ 会话创建成功! SessionID: ${_sessionData.value?.sessionId?.take(16)}...")
+                    appendLog("✅ Kyber密钥对已生成")
+                    _uiState.value = CryptoUiState.Success
+                } else {
+                    val errorMsg = response.body()?.msg ?: "会话创建失败"
+                    appendLog("❌ 会话创建失败: $errorMsg")
+                    _uiState.value = CryptoUiState.Error(errorMsg)
+                }
+            }
+            
+            override fun onFailure(call: Call<ApiResult<SessionInitResponse>>, t: Throwable) {
+                val errorMsg = t.message ?: "网络错误"
+                appendLog("❌ 会话创建失败: $errorMsg")
+                _uiState.value = CryptoUiState.Error(errorMsg)
+            }
+        })
     }
     
     fun setKyberAlgorithm(algorithm: String) {
