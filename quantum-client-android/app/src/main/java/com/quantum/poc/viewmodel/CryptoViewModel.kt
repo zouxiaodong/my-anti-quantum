@@ -445,7 +445,7 @@ class CryptoViewModel : ViewModel() {
     
     fun sessionInit() {
         _uiState.value = CryptoUiState.Loading
-        appendLog("📌 步骤1: 初始化会话 (Kyber + Dilithium)...")
+        appendLog("📌 步骤1: 初始化会话...")
         
         val request = SessionInitRequest(
             kyberAlgorithm = _sessionData.value?.kyberAlgorithm,
@@ -457,24 +457,23 @@ class CryptoViewModel : ViewModel() {
                 if (response.isSuccessful && response.body()?.code == 0) {
                     response.body()?.data?.let { data ->
                         _sessionData.value = _sessionData.value?.copy(
-                            state = SessionState.KEY_READY,
-                            sessionId = data.sessionId,
-                            publicKey = data.kyberPublicKey,
-                            privateKey = data.kyberPrivateKey
+                            state = SessionState.IDLE,
+                            sessionId = data.sessionId
                         )
                     }
-                    appendLog("✅ 步骤1完成: 会话已创建 (SessionID: ${_sessionData.value?.sessionId?.take(8)}...)")
+                    appendLog("✅ 会话已创建 (SessionID: ${_sessionData.value?.sessionId?.take(16)}...)")
+                    appendLog("📌 请继续: 获取随机数 → 密钥包装 → 生成签名密钥")
                     _uiState.value = CryptoUiState.Success
                 } else {
                     val errorMsg = response.body()?.msg ?: "会话初始化失败"
-                    appendLog("❌ 步骤1失败: $errorMsg")
+                    appendLog("❌ 会话创建失败: $errorMsg")
                     _uiState.value = CryptoUiState.Error(errorMsg)
                 }
             }
             
             override fun onFailure(call: Call<ApiResult<SessionInitResponse>>, t: Throwable) {
                 val errorMsg = t.message ?: "网络错误"
-                appendLog("❌ 步骤1失败: $errorMsg")
+                appendLog("❌ 会话创建失败: $errorMsg")
                 _uiState.value = CryptoUiState.Error(errorMsg)
             }
         })

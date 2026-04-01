@@ -54,35 +54,18 @@ public class SessionController {
         log.info("Session Kyber算法: {}", kyberAlg);
         log.info("Session Dilithium算法: {}", dilithiumAlg);
         
-        return cryptoGatewayService.genPqcKeyPair(new KeyPairRequest(kyberAlg))
-                .flatMap(kyberResult -> {
-                    if (kyberResult.getCode() != 0) {
-                        log.error("Kyber密钥生成失败: {}", kyberResult.getMsg());
-                        return Mono.just(ResponseEntity.ok(Result.error(1, "Kyber密钥生成失败: " + kyberResult.getMsg())));
-                    }
-                    
-                    Map<String, String> kyberKeys = kyberResult.getData();
-                    
-                    CryptoSession session = sessionService.createSession(kyberAlg, dilithiumAlg);
-                    session.setKyberPublicKey(kyberKeys.get("publicKey"));
-                    session.setKyberPrivateKey(kyberKeys.get("privateKey"));
-                    session.setInitialized(true);
-                    sessionService.updateSession(session.getSessionId(), session);
-                    
-                    log.info("========== 会话初始化完成 ==========");
-                    log.info("SessionID: {}", session.getSessionId());
-                    log.info("Kyber公钥: {}...", session.getKyberPublicKey().substring(0, 16));
-                    
-                    SessionInitResponse response = new SessionInitResponse();
-                    response.setSessionId(session.getSessionId());
-                    response.setKyberAlgorithm(kyberAlg);
-                    response.setDilithiumAlgorithm(dilithiumAlg);
-                    response.setKyberPublicKey(kyberKeys.get("publicKey"));
-                    response.setKyberPrivateKey(kyberKeys.get("privateKey"));
-                    response.setMessage("会话创建成功，Kyber密钥对已生成");
-                    
-                    return Mono.just(ResponseEntity.ok(Result.success(response)));
-                });
+        CryptoSession session = sessionService.createSession(kyberAlg, dilithiumAlg);
+        
+        log.info("========== 会话初始化完成 ==========");
+        log.info("SessionID: {}", session.getSessionId());
+        
+        SessionInitResponse response = new SessionInitResponse();
+        response.setSessionId(session.getSessionId());
+        response.setKyberAlgorithm(kyberAlg);
+        response.setDilithiumAlgorithm(dilithiumAlg);
+        response.setMessage("会话创建成功，请继续生成密钥对");
+        
+        return Mono.just(ResponseEntity.ok(Result.success(response)));
     }
     
     @GetMapping
