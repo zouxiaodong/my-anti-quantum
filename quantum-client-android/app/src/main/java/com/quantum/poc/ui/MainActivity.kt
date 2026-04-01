@@ -148,23 +148,23 @@ class MainActivity : AppCompatActivity() {
     private fun setupButtons() {
         binding.btnNewSession.setOnClickListener { viewModel.newSession() }
         
-        binding.btnGenKeyPair.setOnClickListener { viewModel.genKeyPair() }
+        binding.btnGenKeyPair.setOnClickListener { viewModel.sessionWrapKey() }
         
-        binding.btnGenRandom.setOnClickListener { viewModel.genRandom() }
+        binding.btnGenRandom.setOnClickListener { viewModel.sessionGenRandom() }
         
         binding.btnEncrypt.setOnClickListener {
             val sm4Mode = if (binding.rbSm4Cbc.isChecked) "SM4/CBC/NoPadding" else "SM4/ECB/NoPadding"
-            viewModel.encrypt(sm4Mode)
+            viewModel.sessionEncrypt(sm4Mode)
         }
         
         binding.btnDecrypt.setOnClickListener {
             val sm4Mode = if (binding.rbSm4Cbc.isChecked) "SM4/CBC/NoPadding" else "SM4/ECB/NoPadding"
-            viewModel.decrypt(sm4Mode)
+            viewModel.sessionDecrypt(sm4Mode)
         }
         
         binding.btnSign.setOnClickListener { viewModel.sign() }
         
-        binding.btnGenDilithiumKey.setOnClickListener { viewModel.genDilithiumKeyPair() }
+        binding.btnGenDilithiumKey.setOnClickListener { viewModel.sessionGenKeys() }
         
         binding.btnVerify.setOnClickListener { viewModel.verify() }
         
@@ -174,7 +174,7 @@ class MainActivity : AppCompatActivity() {
         
         binding.btnSm2Verify.setOnClickListener { viewModel.sm2Verify() }
         
-        binding.btnFullFlow.setOnClickListener { viewModel.fullFlow() }
+        binding.btnFullFlow.setOnClickListener { viewModel.sessionFullFlow() }
         
         binding.btnClearLog.setOnClickListener { viewModel.clearLog() }
     }
