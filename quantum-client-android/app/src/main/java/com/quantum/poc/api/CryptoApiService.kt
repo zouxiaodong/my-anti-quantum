@@ -54,6 +54,9 @@ interface CryptoApiService {
     @POST("api/crypto/session/init")
     fun sessionInit(@Body request: SessionInitRequest): Call<ApiResult<SessionInitResponse>>
     
+    @GET("api/crypto/session/genRandom")
+    fun sessionGenRandom(@Query("length") length: Int = 32): Call<ApiResult<String>>
+    
     @GET("api/crypto/session")
     fun sessionGet(@Header("X-Session-Id") sessionId: String): Call<ApiResult<SessionInitResponse>>
     

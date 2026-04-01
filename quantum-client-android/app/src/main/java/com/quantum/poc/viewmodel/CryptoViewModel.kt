@@ -480,6 +480,33 @@ class CryptoViewModel : ViewModel() {
         })
     }
     
+    fun sessionGenRandom() {
+        _uiState.value = CryptoUiState.Loading
+        appendLog("📌 获取随机数...")
+        
+        apiService.sessionGenRandom().enqueue(object : Callback<ApiResult<String>> {
+            override fun onResponse(call: Call<ApiResult<String>>, response: retrofit2.Response<ApiResult<String>>) {
+                if (response.isSuccessful && response.body()?.code == 0) {
+                    val random = response.body()?.data ?: ""
+                    _sessionData.value = _sessionData.value?.copy(
+                        random = random,
+                        sessionKey = random
+                    )
+                    appendLog("✅ 随机数获取成功: ${random.take(8)}...")
+                    _uiState.value = CryptoUiState.Success
+                } else {
+                    appendLog("❌ 随机数获取失败")
+                    _uiState.value = CryptoUiState.Error("获取失败")
+                }
+            }
+            
+            override fun onFailure(call: Call<ApiResult<String>>, t: Throwable) {
+                appendLog("❌ 网络错误: ${t.message}")
+                _uiState.value = CryptoUiState.Error(t.message ?: "网络错误")
+            }
+        })
+    }
+    
     fun sessionWrapKey() {
         val sessionId = _sessionData.value?.sessionId
         if (sessionId.isNullOrEmpty()) {

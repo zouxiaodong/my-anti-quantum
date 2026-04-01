@@ -32,6 +32,19 @@ public class SessionController {
         this.cryptoGatewayService = cryptoGatewayService;
     }
     
+    @GetMapping("/genRandom")
+    public Mono<ResponseEntity<Result<String>>> genRandom(
+            @RequestParam(required = false, defaultValue = "32") Integer length) {
+        log.info("========== 生成随机数 ==========");
+        log.info("长度: {} 字节", length);
+        
+        return cryptoGatewayService.genRandom(length)
+                .map(result -> {
+                    log.info("随机数生成完成: {}...", result.getData().substring(0, 8));
+                    return ResponseEntity.ok(result);
+                });
+    }
+    
     @PostMapping("/init")
     public Mono<ResponseEntity<Result<SessionInitResponse>>> initSession(@Valid @RequestBody SessionInitRequest request) {
         String kyberAlg = request.getKyberAlgorithm() != null ? request.getKyberAlgorithm() : "Kyber512";
