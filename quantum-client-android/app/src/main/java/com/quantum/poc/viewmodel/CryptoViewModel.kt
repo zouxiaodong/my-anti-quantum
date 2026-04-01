@@ -73,14 +73,12 @@ class CryptoViewModel : ViewModel() {
                 if (response.isSuccessful && response.body()?.code == 0) {
                     response.body()?.data?.let { data ->
                         _sessionData.value = _sessionData.value?.copy(
-                            state = SessionState.KEY_READY,
-                            sessionId = data.sessionId,
-                            publicKey = data.kyberPublicKey,
-                            privateKey = data.kyberPrivateKey
+                            state = SessionState.IDLE,
+                            sessionId = data.sessionId
                         )
                     }
                     appendLog("✅ 会话创建成功! SessionID: ${_sessionData.value?.sessionId?.take(16)}...")
-                    appendLog("✅ Kyber密钥对已生成")
+                    appendLog("📌 请继续: 获取随机数 → 密钥包装 → 生成签名密钥")
                     _uiState.value = CryptoUiState.Success
                 } else {
                     val errorMsg = response.body()?.msg ?: "会话创建失败"
