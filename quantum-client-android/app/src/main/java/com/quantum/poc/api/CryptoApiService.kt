@@ -68,8 +68,13 @@ interface CryptoApiService {
     
     @POST("api/crypto/session/wrapKey")
     fun sessionWrapKey(
-        @Header("X-Session-Id") sessionId: String,
         @Body request: SessionWrapKeyRequest
+    ): Call<ApiResult<Map<String, String>>>
+    
+    @POST("api/crypto/session/saveSessionKey")
+    fun sessionSaveKey(
+        @Header("X-Session-Id") sessionId: String,
+        @Body request: SessionSaveKeyRequest
     ): Call<ApiResult<Map<String, String>>>
     
     @POST("api/crypto/session/genKeys")

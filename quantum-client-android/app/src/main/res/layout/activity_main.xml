@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background">
@@ -11,7 +10,6 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- 标题 -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -21,262 +19,20 @@
             android:gravity="center"
             android:layout_marginBottom="16dp"/>
 
-        <!-- ==================== 会话管理 ==================== -->
         <TextView
+            android:id="@+id/tvStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📌 会话管理"
-            android:textStyle="bold"
+            android:text="Ready"
             android:textSize="16sp"
-            android:layout_marginTop="8dp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp"
-            android:gravity="center_vertical">
-
-            <Button
-                android:id="@+id/btnNewSession"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="新建会话 🔄"/>
-
-            <TextView
-                android:id="@+id/tvSessionId"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:text=""
-                android:textSize="12sp"
-                android:textColor="@color/green"
-                android:ellipsize="middle"
-                android:singleLine="true"/>
-        </LinearLayout>
-
-        <!-- 协商算法单独一行 -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="协商算法: "
-                android:layout_marginEnd="8dp"/>
-
-            <Spinner
-                android:id="@+id/spinnerKyber"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:background="@android:drawable/btn_dropdown"
-                android:entries="@array/kyber_algorithms"
-                android:spinnerMode="dropdown"/>
-        </LinearLayout>
-
-        <!-- 状态显示 -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:id="@+id/tvSessionStatus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="🔴 未初始化"
-                android:textColor="@color/red"/>
-        </LinearLayout>
-
-        <!-- ==================== 第一步: 生成Kyber密钥对 ==================== -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📌 第一步: 生成Kyber密钥对"
             android:textStyle="bold"
-            android:textSize="16sp"
-            android:layout_marginTop="16dp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-
-            <Button
-                android:id="@+id/btnGenKeyPair"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="生成密钥对"/>
-
-            <TextView
-                android:id="@+id/tvKeyGenStatus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="⏳ 待生成"
-                android:layout_marginStart="8dp"
-                android:layout_gravity="center_vertical"/>
-        </LinearLayout>
+            android:gravity="center"
+            android:layout_marginBottom="16dp"/>
 
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="公钥 (Public Key)"
-            android:layout_marginTop="8dp">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etPublicKey"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textMultiLine"
-                android:minLines="2"
-                android:maxLines="4"/>
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- ==================== 第二步: 获取随机数+密钥包装 ==================== -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📌 第二步: 获取随机数 + 密钥包装"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            android:layout_marginTop="16dp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-
-            <Button
-                android:id="@+id/btnGenRandom"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="获取随机数"
-                android:layout_marginEnd="4dp"/>
-
-            <Button
-                android:id="@+id/btnWrapKey"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="密钥包装"/>
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="4dp">
-
-            <TextView
-                android:id="@+id/tvRandomStatus"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="⏳ 待获取"
-                android:textSize="12sp"/>
-
-            <TextView
-                android:id="@+id/tvWrapKeyStatus"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="⏳ 待包装"
-                android:textSize="12sp"/>
-        </LinearLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="随机数 (Random)"
-            android:layout_marginTop="8dp">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etRandom"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textMultiLine"
-                android:minLines="2"
-                android:maxLines="4"/>
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="KeyCipher (加密后的会话密钥)"
-            android:layout_marginTop="8dp">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etSessionKey"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textMultiLine"
-                android:minLines="2"
-                android:maxLines="4"/>
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="会话密钥 (Session Key)"
-            android:layout_marginTop="8dp">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etSessionKey"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textMultiLine"
-                android:minLines="2"
-                android:maxLines="4"/>
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- ==================== 第三步: 加解密 ==================== -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📌 第三步: 加解密 (SM4)"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            android:layout_marginTop="16dp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-
-            <RadioGroup
-                android:id="@+id/rgSm4Mode"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <RadioButton
-                    android:id="@+id/rbSm4Cbc"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="SM4-CBC"
-                    android:checked="true"/>
-
-                <RadioButton
-                    android:id="@+id/rbSm4Ecb"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="SM4-ECB"/>
-            </RadioGroup>
-        </LinearLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="明文 (Plain Text)"
-            android:layout_marginTop="8dp">
+            android:hint="明文 (Plain Text)">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etPlainText"
                 android:layout_width="match_parent"
@@ -289,295 +45,48 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-
-            <Button
-                android:id="@+id/btnEncrypt"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="加密"
-                android:layout_marginEnd="4dp"/>
-
-            <Button
-                android:id="@+id/btnDecrypt"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="解密"/>
-        </LinearLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="密文 (Cipher Text)"
-            android:layout_marginTop="8dp">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etCipherText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textMultiLine"
-                android:minLines="2"/>
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- 解密结果单独显示 -->
-        <TextView
-            android:id="@+id/tvDecryptResult"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text=""
-            android:textColor="@color/green"
-            android:textStyle="bold"
-            android:layout_marginTop="4dp"/>
-
-        <!-- ==================== 第四步: 签名验签 ==================== -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📌 第四步: 签名验签 (Dilithium)"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            android:layout_marginTop="16dp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="签名算法: "
-                android:layout_marginEnd="8dp"/>
-
-            <Spinner
-                android:id="@+id/spinnerDilithium"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:background="@android:drawable/btn_dropdown"
-                android:entries="@array/dilithium_algorithms"
-                android:spinnerMode="dropdown"/>
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-
-            <Button
-                android:id="@+id/btnGenDilithiumKey"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="生成密钥"
-                android:layout_marginEnd="4dp"/>
-
-            <Button
-                android:id="@+id/btnSign"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="签名"
-                android:layout_marginEnd="4dp"/>
-
-            <Button
-                android:id="@+id/btnVerify"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="验签"/>
-        </LinearLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="签名 (Signature)"
-            android:layout_marginTop="8dp">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etSignature"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textMultiLine"
-                android:minLines="2"
-                android:maxLines="4"/>
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="签名公钥"
-            android:layout_marginTop="8dp">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etDilithiumPublicKey"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textMultiLine"
-                android:minLines="2"/>
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="验签结果"
-            android:layout_marginTop="8dp">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etVerifyResult"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="text"/>
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- ==================== SM2 国密算法 ==================== -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📌 SM2 国密算法"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            android:layout_marginTop="16dp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-
-            <Button
-                android:id="@+id/btnSm2GenKey"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="生成密钥"
-                android:layout_marginEnd="4dp"/>
-
-            <Button
-                android:id="@+id/btnSm2Sign"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="SM2签名"
-                android:layout_marginEnd="4dp"/>
-
-            <Button
-                android:id="@+id/btnSm2Verify"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="SM2验签"/>
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/tvSm2VerifyResult"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text=""
-            android:textSize="14sp"/>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="SM2公钥"
-            android:layout_marginTop="8dp">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etSm2PublicKey"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textMultiLine"
-                android:minLines="2"/>
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="SM2私钥"
-            android:layout_marginTop="8dp">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etSm2PrivateKey"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textMultiLine"
-                android:minLines="2"/>
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="SM2签名结果"
-            android:layout_marginTop="8dp">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etSm2Signature"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textMultiLine"
-                android:minLines="2"/>
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- ==================== 完整流程测试 ==================== -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📌 完整流程测试"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            android:layout_marginTop="16dp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="组合: "/>
-
-            <TextView
-                android:id="@+id/tvFullFlow"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Kyber512 + SM4-CBC + Dilithium2"
-                android:textStyle="bold"/>
-        </LinearLayout>
-
-        <Button
-            android:id="@+id/btnFullFlow"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="一键执行完整流程"
-            android:layout_marginTop="8dp"
-            android:backgroundTint="@color/purple_500"/>
-
-        <!-- ==================== 日志输出 ==================== -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:layout_marginTop="16dp">
 
-            <TextView
+            <Button
+                android:id="@+id/btnNewSession"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="📌 日志"
-                android:textStyle="bold"
-                android:textSize="16sp"
-                android:layout_weight="1"/>
+                android:layout_weight="1"
+                android:text="新建会话"
+                android:layout_marginEnd="4dp"/>
 
             <Button
-                android:id="@+id/btnClearLog"
+                android:id="@+id/btnGenerateKeys"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="生成密钥"
+                android:layout_marginEnd="4dp"
+                android:enabled="false"/>
+
+            <Button
+                android:id="@+id/btnEncryptUpload"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="加密上传"
+                android:layout_marginEnd="4dp"
+                android:enabled="false"/>
+
+            <Button
+                android:id="@+id/btnReset"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="清空"
-                android:minHeight="0dp"
-                android:minWidth="0dp"
-                android:padding="4dp"/>
+                android:text="重置"/>
         </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📌 日志"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:layout_marginTop="16dp"/>
 
         <TextView
             android:id="@+id/tvLog"
@@ -585,7 +94,7 @@
             android:layout_height="wrap_content"
             android:background="@color/log_background"
             android:padding="8dp"
-            android:minHeight="150dp"
+            android:minHeight="200dp"
             android:text="等待操作..."
             android:textSize="12sp"
             android:layout_marginTop="8dp"/>

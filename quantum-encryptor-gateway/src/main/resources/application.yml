@@ -1,0 +1,25 @@
+server:
+  port: 8443
+
+spring:
+  application:
+    name: quantum-encryptor-gateway
+
+# Encryptor machine connection (DMZ intranet)
+encryptor:
+  base-url: http://localhost:28101/scyh-server/v101
+
+# Business server connection (business network)
+business-server:
+  base-url: http://localhost:8080
+
+# Session configuration
+session:
+  ttl-ms: 86400000  # 24 hours
+  max-sessions: 10000
+
+# Replay protection
+replay:
+  timestamp-window-ms: 300000  # 5 minutes
+  nonce-ttl-ms: 300000         # 5 minutes
+  nonce-cache-size: 100000

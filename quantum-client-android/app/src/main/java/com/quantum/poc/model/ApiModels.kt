@@ -90,19 +90,6 @@ data class HybridDecryptResponse(
     @SerializedName("verifyResult") val verifyResult: Boolean
 )
 
-data class SessionInitRequest(
-    @SerializedName("kyberAlgorithm") val kyberAlgorithm: String? = null,
-    @SerializedName("dilithiumAlgorithm") val dilithiumAlgorithm: String? = null
-)
-
-data class SessionInitResponse(
-    @SerializedName("sessionId") val sessionId: String,
-    @SerializedName("kyberAlgorithm") val kyberAlgorithm: String,
-    @SerializedName("dilithiumAlgorithm") val dilithiumAlgorithm: String,
-    @SerializedName("kyberPublicKey") val kyberPublicKey: String,
-    @SerializedName("kyberPrivateKey") val kyberPrivateKey: String,
-    @SerializedName("message") val message: String? = null
-)
 
 data class SessionEncryptRequest(
     @SerializedName("data") val data: String,
@@ -128,7 +115,13 @@ data class SessionDecryptResponse(
 )
 
 data class SessionWrapKeyRequest(
+    @SerializedName("algorithm") val algorithm: String = "Kyber512",
+    @SerializedName("publicKey") val publicKey: String,
     @SerializedName("sessionKey") val sessionKey: String
+)
+
+data class SessionSaveKeyRequest(
+    @SerializedName("keyCipher") val keyCipher: String
 )
 
 data class SessionKyberKeyResponse(
